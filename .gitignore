@@ -1,0 +1,29 @@
+# Node dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+dist/
+client/dist/
+server/dist/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+client/.env
+server/.env
+
+# Local database and uploads
+server/data/*.db
+server/data/uploads/
+server/data/uploads/*
+server/data/*.sqlite
+server/data/*.sqlite3
+
+# Logs
+*.log
+
+# OS/editor
+.DS_Store
