@@ -13,7 +13,7 @@
  * IMPORTANT LIMITATION: this cannot do live web search — there's no internet
  * lookup happening offline. For anything outside the ~28 general topics or
  * 41 diseases, it says so honestly rather than fabricating a citation, and
- * suggests connecting the Claude API for full live research mode.
+ * recommends checking current information with a qualified clinician or reputable public-health source.
  */
 
 const ollama = require('./ollamaClient');
@@ -53,7 +53,7 @@ function findDiseaseTopic(query) {
 }
 
 const NO_MATCH_MESSAGE =
-  "Medora's local assistant doesn't have live internet access, so it can only answer from a small set of built-in reference topics, and this question falls outside that set. For open-ended, cited research on any topic, connect your Anthropic API key to unlock full research mode with live web search.";
+  "Medora's local reference library does not cover this question, and this app cannot perform live web searches. Check a current, reputable public-health source or ask a qualified clinician.";
 
 /**
  * Same signature as services/research.js's researchHealthTopic.

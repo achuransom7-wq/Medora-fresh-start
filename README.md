@@ -1,12 +1,12 @@
 # Medora — AI Health Assistant (Web App)
 
-A calm, chat-based AI health assistant for Cameroon: describe your symptoms, get clear guidance, and get connected to a real doctor when it matters. 
+A chat-based health guidance app for Cameroon: describe symptoms, review general next steps, and organize health notes. It does not diagnose or book medical appointments.
 
 ## Stack
 
 - **Frontend**: React 19 + Vite + Tailwind CSS v4, React Router
 - **Backend**: Node.js + Express 5, SQLite (`better-sqlite3`), JWT auth
-- **AI**: Local rule-based assistant by default, with optional Anthropic Claude API (`claude-sonnet-4-6`) support
+- **AI**: Local rule-based assistant; optional local Ollama model, disabled by default
 - **Security**: bcrypt password hashing, httpOnly refresh cookies, rate limiting, helmet, input validation
 
 ## Project structure
@@ -36,10 +36,10 @@ Every AI response is classified into one of four severity levels, shown as a col
 |---|---|
 | `self_care` | Manageable at home |
 | `monitor` | Watch it, seek care if it worsens |
-| `see_doctor` | Book a visit within 24–48 hours |
+| `see_doctor` | Consider arranging an in-person visit within 24–48 hours |
 | `urgent` | Seek immediate in-person care |
 
-**Safety design**: a hard-coded red-flag keyword list (chest pain, difficulty breathing, suicidal ideation, severe bleeding, stroke signs, anaphylaxis, etc.) in `server/src/services/triage.js` force-escalates severity to `urgent` **regardless of what the AI model concludes**. This is a deterministic safety net that does not depend solely on LLM judgment. When severity is `see_doctor` or `urgent`, the app automatically surfaces nearby doctors from the seeded directory and lets the user request a referral.
+**Safety design**: a hard-coded red-flag keyword list in `server/src/services/triage.js` can escalate a response to `urgent`. This is general guidance, not a diagnosis or emergency service. The repository does not seed real providers; the referral feature stays empty until an operator adds and verifies provider records. Referral requests are saved in Medora and do not contact or book with a clinic.
 
 ## Local setup
 
@@ -49,8 +49,7 @@ Every AI response is classified into one of four severity levels, shown as a col
 cd server
 npm install
 cp .env.example .env
-# Edit .env: set JWT_SECRET (random string). The local assistant works without an API key.
-npm run seed     # seeds 12 doctors across Buea and Bamenda
+# Edit .env: set a long, random JWT_SECRET. The assistant needs no API key.
 npm run dev      # starts on http://localhost:4000
 ```
 
@@ -59,7 +58,6 @@ npm run dev      # starts on http://localhost:4000
 ```bash
 cd client
 npm install
-# .env already points to http://localhost:4000/api — edit if needed
 npm run dev      # starts on http://localhost:5173
 ```
 
@@ -72,37 +70,34 @@ PORT=4000
 NODE_ENV=development
 AI_PROVIDER=local
 JWT_SECRET=<long random string>
-ANTHROPIC_API_KEY=<your Anthropic API key>
-ANTHROPIC_MODEL=claude-sonnet-4-6
 CLIENT_ORIGIN=http://localhost:5173
 DB_PATH=./data/medora.db
+UPLOAD_DIR=./data/uploads
+OLLAMA_ENABLED=false
 ```
 
-## Deployment (matches your existing Render/GitHub Pages workflow)
+## Dynamic Render deployment
 
-- **Backend → Render**: use a persistent disk mounted at the `DB_PATH` directory (same pattern as your restaurant projects) so the SQLite file survives restarts. Set all env vars above in the Render dashboard. Build command: `npm install`. Start command: `npm start`.
-- **Frontend → Render (static site) or GitHub Pages**: build command `npm run build`, publish directory `dist`. Set `VITE_API_URL` to your deployed backend's `/api` URL before building (GitHub Pages can't do full-stack, so the backend must be hosted separately — Render is the better fit here given the SQLite persistence requirement, same as your other full-stack projects).
+Create a Render **Web Service** (not a Static Site) from the repository root. Build command: `npm --prefix server ci --omit=dev && npm --prefix client ci --include=dev && npm --prefix client run build`. Start command: `node server/src/index.js`. Set `NODE_ENV=production`, `AI_PROVIDER=local`, a strong `JWT_SECRET`, `DB_PATH=/var/data/medora.db`, and `UPLOAD_DIR=/var/data/uploads`. Attach a persistent disk mounted at `/var/data`; without it, SQLite data and uploads may be lost on redeploy. `VITE_API_URL` is not needed; the client calls the same-origin `/api` path.
 
 ## Design system
 
 - **Palette**: deep teal (`#0F5E56`) for trust/brand, mint for calm backgrounds, coral (`#FF6F5E`) reserved for urgent-only states, amber for "monitor", orange for "see a doctor."
-- **Type**: Fraunces (display) + Inter (body) + JetBrains Mono (data/tags).
+- **Type**: system UI fonts with Georgia display type. No external font requests.
 - **Signature element**: the severity rail on chat messages, and a heartbeat-style "pulse divider" used between conversation turns — both reinforce the health context without resorting to a literal heart icon.
 
 ## Local assistant mode
 
-The app automatically uses a local, no-API-key assistant when `ANTHROPIC_API_KEY` is missing or still contains the example placeholder. You can also set `AI_PROVIDER=local` explicitly. This mode provides symptom follow-up questions, basic self-care guidance, deterministic red-flag escalation, severity labels, and conversation titles from the user's first message. It does not inspect images or documents and is not a replacement for a clinician.
+The app uses its local, no-API-key assistant by default. It provides pattern-based health guidance, follow-up questions, red-flag escalation, severity labels, local research from bundled references, and conversation summaries. It is not a replacement for a clinician. The built-in engine does not visually analyze attachments or perform live web searches.
 
-For a genuine local language model, install [Ollama](https://ollama.com), download a model such as `llama3.2`, start Ollama, and set `AI_PROVIDER=ollama`. Medora will send the conversation to Ollama on your machine and fall back to the offline engine if Ollama is unavailable:
+To optionally use a local language model, install Ollama on the server host, download a model, and set `OLLAMA_ENABLED=true` and `OLLAMA_MODEL`. Prompts and selected supported attachments are sent to the configured Ollama endpoint. If it is unavailable, Medora falls back to its built-in engine. On Render, Ollama must be separately hosted and reachable; it is not included in the Web Service.
 
 ```bash
 ollama pull llama3.2
 ```
 
-To switch to Claude later, set `AI_PROVIDER=anthropic` and replace `ANTHROPIC_API_KEY` with a real key, then restart the server.
-
 ## What's not yet wired up
 
-- Claude-specific image understanding, memory extraction, research reports, and AI visit summaries require an Anthropic API key. The core chat remains available in local mode without it.
+- Verified provider records and clinic contact workflows are not configured in this repository. Add only reviewed provider details before enabling referrals for real users.
 - Payment integration (MTN/Orange Money) is not part of this build — this platform is a free health assistant, not a paid service, per the project brief. Can be added later if a premium tier is planned.
 - Push notifications, WhatsApp integration (Phase 4 of your timeline) are handled separately — see the mobile app section for how notifications work there.

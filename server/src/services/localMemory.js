@@ -8,7 +8,7 @@
  * Instead of asking an LLM to extract durable facts, this uses straightforward
  * pattern matching for the phrasings people actually use for allergies,
  * chronic conditions, and medications. It's less flexible than the
- * Claude-backed version but needs no API calls and is fully deterministic.
+ * remote-model version but needs no API calls and is fully deterministic.
  *
  * If Ollama is enabled (see ollamaClient.js), it's used as a second pass to
  * catch anything the patterns miss — still optional, still fails soft.
@@ -48,7 +48,7 @@ function extractWithPatterns(text) {
   return facts;
 }
 
-/** Optional second pass via a local LLM, if enabled — same JSON-array contract as the Claude version */
+/** Optional second pass via a local LLM, if enabled — same JSON-array contract as the rule-based pass */
 async function extractWithOllama(userMessage, assistantMessage) {
   if (!ollama.isEnabled()) return [];
   const systemPrompt = `Extract durable, reusable facts about this patient worth remembering for FUTURE visits (allergies, chronic conditions, ongoing medications, recurring symptom patterns, or clear communication preferences). Do NOT include one-off symptoms from a single mild illness. Respond with ONLY a JSON array, no prose: [{"category": "allergy"|"condition"|"medication"|"pattern"|"preference"|"other", "content": "short factual sentence"}]. If nothing is worth remembering, respond with [].`;

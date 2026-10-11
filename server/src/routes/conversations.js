@@ -34,12 +34,31 @@ const upload = multer({
     destination: (req, file, cb) => cb(null, UPLOAD_DIR),
     filename: (req, file, cb) => cb(null, `${randomUUID()}${path.extname(file.originalname).slice(0, 10)}`),
   }),
-  limits: { fileSize: 10 * 1024 * 1024, files: 3 },
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 3,
+    fields: 1,
+    fieldSize: 16 * 1024,
+    fieldNameSize: 100,
+    parts: 4,
+  },
   fileFilter: (req, file, cb) => {
     if (!ALLOWED_MIME.has(file.mimetype)) return cb(new Error('Unsupported file type'));
     cb(null, true);
   },
 });
+
+function receiveUploads(req, res, next) {
+  upload.array('files', 3)(req, res, (error) => {
+    if (!error) return next();
+
+    (req.files || []).forEach((file) => fs.unlink(file.path, () => {}));
+    const status = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return res.status(status).json({
+      error: status === 413 ? 'Each attachment must be 10 MB or smaller.' : 'The attachment request is invalid or uses an unsupported file type.',
+    });
+  });
+}
 
 function getPreferences(userId) {
   let prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
@@ -48,6 +67,19 @@ function getPreferences(userId) {
     prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
   }
   return prefs;
+}
+
+function requireOwnedConversation(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid conversation id' });
+
+  const conversation = db
+    .prepare('SELECT * FROM conversations WHERE id = ? AND user_id = ?')
+    .get(req.params.id, req.userId);
+  if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+
+  req.conversation = conversation;
+  next();
 }
 
 // List all conversations for the logged-in user (optionally filtered by project)
@@ -173,8 +205,10 @@ router.post('/', body('projectId').optional().isUUID(), (req, res) => {
 router.post(
   '/:id/messages',
   chatLimiter,
-  upload.array('files', 3),
-  [param('id').isUUID(), body('content').trim().isLength({ min: 1, max: 4000 })],
+  param('id').isUUID(),
+  requireOwnedConversation,
+  receiveUploads,
+  body('content').trim().isLength({ min: 1, max: 4000 }),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -183,10 +217,7 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const conversation = db
-      .prepare('SELECT * FROM conversations WHERE id = ? AND user_id = ?')
-      .get(req.params.id, req.userId);
-    if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+    const conversation = req.conversation;
 
     const { content } = req.body;
 
@@ -307,7 +338,9 @@ router.get('/attachments/:attachmentId/file', param('attachmentId').isUUID(), (r
   if (!fs.existsSync(att.file_path)) return res.status(404).json({ error: 'File no longer available' });
 
   res.setHeader('Content-Type', att.mime_type);
-  res.setHeader('Content-Disposition', `inline; filename="${att.original_name}"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Content-Disposition', att.kind === 'image' ? 'inline; filename="medora-image"' : 'attachment; filename="medora-document"');
   fs.createReadStream(att.file_path).pipe(res);
 });
 

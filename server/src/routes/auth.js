@@ -50,7 +50,10 @@ router.post(
   [
     body('fullName').trim().isLength({ min: 2, max: 100 }).escape(),
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+    body('password')
+      .isLength({ min: 8, max: 72 })
+      .custom((value) => typeof value === 'string' && Buffer.byteLength(value, 'utf8') <= 72)
+      .withMessage('Password must be 8 to 72 UTF-8 bytes long'),
     body('phone').optional().trim().isLength({ max: 20 }),
     body('termsAccepted').custom((value) => value === true).withMessage('You must accept the Terms of Use'),
     body('healthDataConsent').custom((value) => value === true).withMessage('You must consent to health-data processing'),
@@ -98,7 +101,10 @@ router.post(
 router.post(
   '/login',
   authLimiter,
-  [body('email').isEmail().normalizeEmail(), body('password').notEmpty()],
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').notEmpty().custom((value) => typeof value === 'string' && Buffer.byteLength(value, 'utf8') <= 72),
+  ],
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid email or password' });
@@ -133,7 +139,7 @@ router.post('/refresh', (req, res) => {
   if (!token) return res.status(401).json({ error: 'No refresh token provided' });
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     if (payload.type !== 'refresh') throw new Error('Invalid token type');
 
     const tokenHash = hashToken(token);

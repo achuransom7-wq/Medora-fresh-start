@@ -1,4 +1,5 @@
 import PulseDivider from './PulseDivider';
+import { Link } from 'react-router-dom';
 
 export default function AuthLayout({ title, subtitle, children }) {
   return (

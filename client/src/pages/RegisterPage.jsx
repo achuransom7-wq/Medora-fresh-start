@@ -72,6 +72,7 @@ export default function RegisterPage() {
               type={showPassword ? 'text' : 'password'}
               required
               minLength={8}
+              maxLength={72}
               autoComplete="new-password"
               value={form.password}
               onChange={update('password')}
@@ -110,7 +111,7 @@ export default function RegisterPage() {
               className="mt-1 h-4 w-4 accent-teal-deep"
             />
             <span>
-              I explicitly consent to Medora processing health information I choose to share. Relevant information may be sent to the configured AI provider; if I use dictation, audio may be sent to my browser’s speech-recognition provider. See the <Link to="/legal/privacy" className="font-medium text-teal-deep underline">Privacy Policy</Link>.
+              I explicitly consent to Medora processing health information I choose to share. If optional Ollama is enabled, relevant information may be sent to its configured endpoint; if I use dictation, audio may be sent to my browser’s speech-recognition provider. See the <Link to="/legal/privacy" className="font-medium text-teal-deep underline">Privacy Policy</Link>.
             </span>
           </label>
           <label className="flex items-start gap-2.5">

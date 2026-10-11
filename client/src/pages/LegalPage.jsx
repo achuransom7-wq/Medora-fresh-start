@@ -16,8 +16,7 @@ const policies = {
         heading: 'How information is used and shared',
         paragraphs: [
           'Information is used to create and secure your account, provide the features you request, keep your saved health records, and respond to service errors.',
-          'When Anthropic AI is enabled, your current message and relevant conversation history may be sent to Anthropic. The app may also send relevant health-profile details, saved memories, and attached images for a response. Research requests may include the question and relevant conversation context and use Anthropic web search.',
-          'When Ollama mode is enabled, prompts, conversation history, and supported attachments are sent to the Ollama endpoint configured by the operator. “Local” only means local if that endpoint is actually operated on the same trusted machine or network.',
+          'The current built-in assistant and bundled research library process information on the Medora server and do not make live web searches. If the operator enables optional Ollama, relevant prompts, conversation history, health details, saved memories, and supported image attachments may be sent to the Ollama endpoint configured by the operator. “Local” only means local if that endpoint is actually operated on the same trusted machine or network.',
           'If you use voice dictation, your browser’s Web Speech implementation may send audio to a speech-recognition provider chosen by your browser or operating-system vendor. Dictation is optional; check that provider’s privacy terms before using it.',
           'The application host can store or process application data according to the deployment configuration. Research results may link to third-party websites; opening a link shares information with that website under its own practices. Referral requests are saved in Medora; this build does not automatically send them to a clinic.',
         ],

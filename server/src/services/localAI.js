@@ -25,12 +25,12 @@
  *
  * WHAT'S HONEST ABOUT ITS LIMITS (please keep telling users this):
  *  - 41 diseases is a lot more than 25 hand-typed entries, but it is still
- *    nowhere near a real doctor's or Claude's breadth. Outside this dataset,
+ *    nowhere near a clinician's breadth. Outside this dataset,
  *    the agent says so rather than guessing.
  *  - It performs pattern matching against known disease-symptom
  *    associations, not full clinical reasoning — it can't account for a
  *    specific patient's full history, labs, exam findings, or rare
- *    presentations the way a clinician (or Claude) can.
+ *    presentations the way a clinician can.
  *  - "Self-learning" here means reweighting among the same 41 reviewed
  *    diseases based on feedback — it does not learn new diseases, new
  *    symptoms, or medical facts beyond what's in the dataset.
