@@ -5,6 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const conversationRoutes = require('./routes/conversations');
@@ -62,6 +63,14 @@ app.use('/api/local-agent', localAgentFeedbackRoutes);
 // 404 handler
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Not found' });
+});
+
+const clientDist = path.resolve(__dirname, '../../client/dist');
+app.use(express.static(clientDist));
+app.get(/.*/, (req, res, next) => {
+  res.sendFile(path.join(clientDist, 'index.html'), (err) => {
+    if (err) next(err);
+  });
 });
 
 // Global error handler
