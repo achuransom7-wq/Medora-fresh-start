@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Menu, ArrowLeft, Check, Trash2, X } from 'lucide-react';
 import client from '../api/client';
 import Sidebar from '../components/Sidebar';
@@ -138,7 +138,7 @@ export default function ProfilePage() {
         <div className="max-w-2xl mx-auto w-full px-4 py-8">
           <h1 className="font-display text-2xl font-semibold text-ink mb-1">Your profile</h1>
           <p className="text-ink-soft text-sm mb-6">
-            This helps Medora give you more relevant guidance. It's never shared without your consent.
+            Optional details help personalize features. Depending on the AI provider configured for this app, relevant chat or profile information may be sent to that provider. See the <Link to="/legal/privacy" className="text-teal-deep underline">Privacy Policy</Link>.
           </p>
 
           <form id="profile-details-form" onSubmit={handleSave} className="space-y-6">
@@ -166,8 +166,8 @@ export default function ProfilePage() {
             <section className="bg-white border border-line rounded-2xl p-5">
               <h2 className="font-semibold text-ink text-sm mb-4">Emergency contact</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Name" value={health.emergencyContactName} onChange={(v) => setHealth({ ...health, emergencyContactName: v })} />
-                <Field label="Phone" value={health.emergencyContactPhone} onChange={(v) => setHealth({ ...health, emergencyContactPhone: v })} />
+                <Field id="emergency-contact-name" label="Name" value={health.emergencyContactName} onChange={(v) => setHealth({ ...health, emergencyContactName: v })} />
+                <Field id="emergency-contact-phone" label="Phone" value={health.emergencyContactPhone} onChange={(v) => setHealth({ ...health, emergencyContactPhone: v })} />
               </div>
             </section>
 
@@ -196,12 +196,12 @@ export default function ProfilePage() {
                 <p className="text-xs text-ink-soft mt-1 mb-3">
                   Permanently delete your profile, conversations, health information, and uploaded files.
                 </p>
-                {deleteError && <p className="text-xs text-coral mb-3">{deleteError}</p>}
+                {deleteError && <p role="alert" className="text-xs text-coral-ink mb-3">{deleteError}</p>}
                 <button
                   type="button"
                   onClick={() => setShowDeleteAccountModal(true)}
                   disabled={deleting}
-                  className="inline-flex items-center gap-2 border border-coral text-coral font-medium text-sm px-3.5 py-2 rounded-lg hover:bg-coral hover:text-white transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 border border-coral-ink text-coral-ink font-medium text-sm px-3.5 py-2 rounded-lg hover:bg-coral-ink hover:text-white transition-colors disabled:opacity-50"
                 >
                   <Trash2 size={14} />
                   {deleting ? 'Deleting account...' : 'Delete my account'}
@@ -223,7 +223,7 @@ export default function ProfilePage() {
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setShowDeleteAccountModal(false)} className="rounded-lg border border-line px-4 py-2 text-sm text-ink-soft hover:bg-cloud">Cancel</button>
-              <button type="button" onClick={() => { setShowDeleteAccountModal(false); handleDeleteAccount(); }} className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral/90">Delete account</button>
+              <button type="button" onClick={() => { setShowDeleteAccountModal(false); handleDeleteAccount(); }} className="rounded-lg bg-coral-ink px-4 py-2 text-sm font-medium text-white hover:opacity-90">Delete account</button>
             </div>
           </div>
         </div>
@@ -232,11 +232,13 @@ export default function ProfilePage() {
   );
 }
 
-function Field({ label, value, onChange, placeholder }) {
+function Field({ label, value, onChange, placeholder, id }) {
+  const fieldId = id || `profile-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   return (
     <div>
-      <label className="block text-xs font-medium text-ink-soft mb-1.5">{label}</label>
+      <label htmlFor={fieldId} className="block text-xs font-medium text-ink-soft mb-1.5">{label}</label>
       <input
+        id={fieldId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

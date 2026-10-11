@@ -173,7 +173,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
                   <button onClick={() => { setEditingId(c.id); setEditingTitle(c.title); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-ink hover:bg-cloud">
                     <Pencil size={14} /> Rename
                   </button>
-                  <button onClick={() => handleDelete(c)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-coral hover:bg-coral-soft">
+                  <button onClick={() => handleDelete(c)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-coral-ink hover:bg-coral-soft">
                     <Trash2 size={14} /> Delete chat
                   </button>
                 </div>
@@ -240,13 +240,14 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
           <form onSubmit={handleCreateProject} className="px-3 pb-2 flex gap-1.5">
             <input
               autoFocus
+              aria-label="Case thread name"
               value={newProjectTitle}
               onChange={(e) => setNewProjectTitle(e.target.value)}
               placeholder="e.g. Managing my asthma"
               className="flex-1 text-sm border border-line rounded-lg px-2.5 py-1.5 outline-none focus:border-teal-mid"
             />
             <button type="submit" className="text-sm text-teal-deep font-medium px-2">
-              Add
+              Add case thread
             </button>
           </form>
         )}
@@ -254,7 +255,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
         <div className={`flex-1 overflow-y-auto px-2 pb-2 ${collapsed ? 'md:hidden' : ''}`}>
           {projects.length > 0 && (
             <>
-              <p className="px-2 py-2 text-xs font-medium text-ink-soft/70 uppercase tracking-wide">Case threads</p>
+              <p className="px-2 py-2 text-xs font-medium text-ink-soft uppercase tracking-wide">Case threads</p>
               <div className="space-y-1 mb-3">
                 {projects.map((p) => {
                   const items = byProject(p.id);
@@ -269,7 +270,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
                         {isOpen2 ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                         <Folder size={14} className="text-teal-mid flex-shrink-0" />
                         <span className="truncate font-medium flex-1 text-left">{p.title}</span>
-                        <span className="text-xs text-ink-soft/60">{items.length}</span>
+                        <span className="text-xs text-ink-soft">{items.length}</span>
                         </button>
                         <button
                           onClick={() => setOpenMenuId((current) => current === p.id ? null : p.id)}
@@ -293,7 +294,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
                             <button onClick={() => { handleRenameProject(p); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-ink hover:bg-cloud">
                               <Pencil size={14} /> Rename thread
                             </button>
-                            <button onClick={() => handleDeleteProject(p)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-coral hover:bg-coral-soft">
+                            <button onClick={() => handleDeleteProject(p)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-coral-ink hover:bg-coral-soft">
                               <Trash2 size={14} /> Delete thread
                             </button>
                           </div>
@@ -302,7 +303,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
                       {isOpen2 && (
                         <div className="ml-5 space-y-0.5">
                           {items.length === 0 ? (
-                            <p className="px-3 py-1 text-xs text-ink-soft/60">No consultations yet</p>
+                            <p className="px-3 py-1 text-xs text-ink-soft">No consultations yet</p>
                           ) : (
                             items.map(renderConversation)
                           )}
@@ -315,7 +316,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
             </>
           )}
 
-          <p className="px-2 py-2 text-xs font-medium text-ink-soft/70 uppercase tracking-wide">
+          <p className="px-2 py-2 text-xs font-medium text-ink-soft uppercase tracking-wide">
             {projects.length > 0 ? 'Other consultations' : 'Consultations'}
           </p>
           {unassigned.length === 0 && (
@@ -354,11 +355,17 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
             <button
               onClick={handleLogout}
               aria-label="Log out"
-              className="p-1.5 text-ink-soft hover:text-coral transition-colors"
+              className="p-1.5 text-ink-soft hover:text-coral-ink transition-colors"
             >
               <LogOut size={16} />
             </button>
           </div>
+          <nav aria-label="Legal policies" className="flex flex-wrap gap-x-3 gap-y-1 px-2 pb-2 text-[11px]">
+            <Link to="/legal/privacy" className="text-ink-soft underline underline-offset-2">Privacy</Link>
+            <Link to="/legal/terms" className="text-ink-soft underline underline-offset-2">Terms</Link>
+            <Link to="/legal/cookies" className="text-ink-soft underline underline-offset-2">Cookies</Link>
+            <Link to="/legal/refunds" className="text-ink-soft underline underline-offset-2">Refunds</Link>
+          </nav>
         </div>
       </aside>
     </>

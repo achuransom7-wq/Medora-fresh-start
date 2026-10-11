@@ -1,16 +1,18 @@
-import { MapPin, Phone, Star } from 'lucide-react';
+import { MapPin, Phone } from 'lucide-react';
 import { severityStyle } from './SeverityBadge';
 
 export default function ReferralCard({ suggestion, onBook, bookingId }) {
-  if (!suggestion || !suggestion.doctors?.length) return null;
+  if (!suggestion) return null;
   const s = severityStyle('see_doctor');
 
   return (
     <div className={`rounded-2xl border ${s.bg} border-orange-alert/20 p-4 animate-fade-in-up`}>
       <p className="text-sm font-medium text-ink mb-3">
-        Nearby {suggestion.specialty.toLowerCase()} options you could reach out to:
+        {suggestion.doctors?.length
+          ? `Nearby ${suggestion.specialty.toLowerCase()} options you could reach out to:`
+          : 'No verified provider listings are currently available in Medora. For urgent symptoms, seek care at a nearby emergency facility.'}
       </p>
-      <div className="space-y-2.5">
+      {suggestion.doctors?.length > 0 && <div className="space-y-2.5">
         {suggestion.doctors.map((doc) => (
           <div key={doc.id} className="bg-white rounded-xl p-3 border border-line flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -19,9 +21,6 @@ export default function ReferralCard({ suggestion, onBook, bookingId }) {
               <div className="flex items-center gap-3 mt-1.5 text-xs text-ink-soft">
                 <span className="inline-flex items-center gap-1">
                   <MapPin size={12} /> {doc.city}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Star size={12} className="fill-amber text-amber" /> {doc.rating}
                 </span>
               </div>
             </div>
@@ -44,7 +43,7 @@ export default function ReferralCard({ suggestion, onBook, bookingId }) {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -20,15 +20,15 @@ export default function AuthLayout({ title, subtitle, children }) {
           <h2 className="font-display text-4xl leading-tight text-white font-medium mb-4">
             Calm, clear guidance<br />whenever you need it.
           </h2>
-          <p className="text-mint/80 text-lg max-w-md">
-            Describe your symptoms, get grounded next steps, and connect with a real doctor when it matters.
+            <p className="text-mint text-lg max-w-md">
+              Describe your symptoms and keep health notes together in one place.
           </p>
           <div className="mt-8 max-w-xs">
             <PulseDivider color="rgba(255,255,255,0.35)" />
           </div>
         </div>
 
-        <p className="relative z-10 text-mint/50 text-sm">Not a substitute for professional medical care.</p>
+        <p className="relative z-10 text-mint text-sm">Not a substitute for professional medical care.</p>
       </div>
 
       {/* Right form panel */}
@@ -43,6 +43,12 @@ export default function AuthLayout({ title, subtitle, children }) {
           <h1 className="font-display text-2xl font-semibold text-ink mb-1">{title}</h1>
           <p className="text-ink-soft text-sm mb-7">{subtitle}</p>
           {children}
+          <nav aria-label="Legal policies" className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
+            <Link to="/legal/privacy" className="text-teal-deep underline underline-offset-4">Privacy</Link>
+            <Link to="/legal/terms" className="text-teal-deep underline underline-offset-4">Terms</Link>
+            <Link to="/legal/cookies" className="text-teal-deep underline underline-offset-4">Cookies</Link>
+            <Link to="/legal/refunds" className="text-teal-deep underline underline-offset-4">Refunds</Link>
+          </nav>
         </div>
       </div>
     </div>

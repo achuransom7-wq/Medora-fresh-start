@@ -6,12 +6,23 @@ import RegisterPage from './pages/RegisterPage';
 import ChatPage from './pages/ChatPage';
 import ReferralsPage from './pages/ReferralsPage';
 import ProfilePage from './pages/ProfilePage';
+import LegalPage from './pages/LegalPage';
+import ConsentPage from './pages/ConsentPage';
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          <Route path="/legal/:slug" element={<LegalPage />} />
+          <Route
+            path="/consent"
+            element={
+              <ProtectedRoute>
+                <ConsentPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route

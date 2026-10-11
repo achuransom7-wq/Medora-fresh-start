@@ -98,13 +98,13 @@ export default function ChatInput({ onSend, disabled }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-3 bg-white border border-line rounded-2xl shadow-sm">
+    <form onSubmit={handleSubmit} aria-label="Send a health message" className="p-3 bg-white border border-line rounded-2xl shadow-sm">
       {files.length > 0 && (
         <div className="flex gap-2 flex-wrap px-1 pb-2">
           {files.map((f, idx) => (
             <div key={idx} className="relative group">
               {f.previewUrl ? (
-                <img src={f.previewUrl} alt={f.file.name} className="w-14 h-14 object-cover rounded-lg border border-line" />
+                <img src={f.previewUrl} alt={`Preview of ${f.file.name}`} className="w-14 h-14 object-cover rounded-lg border border-line" />
               ) : (
                 <div className="w-14 h-14 rounded-lg border border-line bg-cloud flex flex-col items-center justify-center px-1">
                   <FileText size={16} className="text-teal-deep" />
@@ -148,6 +148,7 @@ export default function ChatInput({ onSend, disabled }) {
 
         <textarea
           ref={textareaRef}
+          aria-label="Describe your health concern"
           autoFocus
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -164,7 +165,7 @@ export default function ChatInput({ onSend, disabled }) {
             disabled={disabled}
             aria-label={listening ? 'Stop dictation' : 'Start voice dictation'}
             className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 ${
-              listening ? 'bg-coral-soft text-coral' : 'text-ink-soft hover:bg-cloud'
+              listening ? 'bg-coral-soft text-coral-ink' : 'text-ink-soft hover:bg-cloud'
             }`}
           >
             {listening ? <MicOff size={18} /> : <Mic size={18} />}

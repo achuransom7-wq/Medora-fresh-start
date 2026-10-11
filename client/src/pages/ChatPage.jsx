@@ -295,7 +295,7 @@ export default function ChatPage() {
         </header>
 
         {isUrgent && (
-          <div className="bg-coral text-white px-4 py-2.5 flex items-center gap-2 text-sm font-medium">
+          <div className="bg-coral-ink text-white px-4 py-2.5 flex items-center gap-2 text-sm font-medium">
             <ShieldAlert size={16} className="flex-shrink-0" />
             <span>This may be urgent. If you're in danger, go to the nearest hospital or call emergency services now.</span>
           </div>
@@ -360,7 +360,7 @@ export default function ChatPage() {
           <div className="border-t border-line bg-white/60 backdrop-blur-sm px-4 py-3">
             <div className="max-w-3xl mx-auto">
               <ChatInput onSend={handleSend} disabled={sending} />
-              <p className="text-xs text-ink-soft/70 text-center mt-2">
+              <p className="text-xs text-ink-soft text-center mt-2">
                 Medora provides general guidance, not a medical diagnosis. In an emergency, seek in-person care immediately.
               </p>
             </div>

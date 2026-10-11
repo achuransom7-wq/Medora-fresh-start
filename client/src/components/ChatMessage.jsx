@@ -116,7 +116,7 @@ export default function ChatMessage({ message, onLearnMore, onFeedback, research
                           await onFeedback(candidate.name, 'corrected');
                           setFeedback((current) => ({ ...current, [candidate.name]: 'corrected' }));
                         }}
-                        className="inline-flex items-center gap-1 rounded-md border border-coral/40 px-2 py-1 text-coral hover:bg-coral/10 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-md border border-coral-ink/40 px-2 py-1 text-coral-ink hover:bg-coral/10 disabled:opacity-50"
                       >
                         <X size={12} /> Not this
                       </button>

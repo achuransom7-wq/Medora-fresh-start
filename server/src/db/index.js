@@ -47,5 +47,10 @@ try {
 // Always double-check known post-release columns even when the first pass succeeded
 // (covers the case where the column already existed under a different constraint set).
 ensureColumn('conversations', 'project_id', "TEXT REFERENCES projects(id) ON DELETE SET NULL");
+ensureColumn('users', 'terms_accepted_at', 'TEXT');
+ensureColumn('users', 'health_data_consent_at', 'TEXT');
+ensureColumn('users', 'cookie_notice_accepted_at', 'TEXT');
+ensureColumn('users', 'consent_policy_version', 'TEXT');
+ensureColumn('doctors', 'is_verified', 'INTEGER NOT NULL DEFAULT 0');
 
 module.exports = db;

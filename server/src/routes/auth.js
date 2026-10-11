@@ -52,6 +52,9 @@ router.post(
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
     body('phone').optional().trim().isLength({ max: 20 }),
+    body('termsAccepted').custom((value) => value === true).withMessage('You must accept the Terms of Use'),
+    body('healthDataConsent').custom((value) => value === true).withMessage('You must consent to health-data processing'),
+    body('cookieNoticeAccepted').custom((value) => value === true).withMessage('You must acknowledge the essential session cookie'),
   ],
   (req, res) => {
     const errors = validationResult(req);
@@ -66,15 +69,28 @@ router.post(
     const passwordHash = bcrypt.hashSync(password, 12);
 
     db.prepare(
-      `INSERT INTO users (id, full_name, email, phone, password_hash, city, region) VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, fullName, email, phone || null, passwordHash, city || null, region || null);
+      `INSERT INTO users (
+        id, full_name, email, phone, password_hash, city, region,
+        terms_accepted_at, health_data_consent_at, cookie_notice_accepted_at, consent_policy_version
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'), ?)`
+    ).run(id, fullName, email, phone || null, passwordHash, city || null, region || null, '2026-10-11-v1');
 
     db.prepare(`INSERT INTO user_health_profile (user_id) VALUES (?)`).run(id);
 
     const accessToken = issueTokens(res, id);
     res.status(201).json({
       accessToken,
-      user: { id, fullName, email, phone: phone || null, city: city || null, region: region || null },
+      user: {
+        id,
+        fullName,
+        email,
+        phone: phone || null,
+        city: city || null,
+        region: region || null,
+        terms_accepted_at: true,
+        health_data_consent_at: true,
+        cookie_notice_accepted_at: true,
+      },
     });
   }
 );
@@ -104,6 +120,9 @@ router.post(
         phone: user.phone,
         city: user.city,
         region: user.region,
+        terms_accepted_at: user.terms_accepted_at,
+        health_data_consent_at: user.health_data_consent_at,
+        cookie_notice_accepted_at: user.cookie_notice_accepted_at,
       },
     });
   }

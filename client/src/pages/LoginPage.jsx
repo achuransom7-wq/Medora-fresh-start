@@ -34,13 +34,15 @@ export default function LoginPage() {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="bg-coral-soft text-coral text-sm px-3 py-2.5 rounded-xl">{error}</div>
+          <div role="alert" className="bg-coral-soft text-coral-ink text-sm px-3 py-2.5 rounded-xl">{error}</div>
         )}
         <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">Email</label>
+          <label htmlFor="login-email" className="block text-sm font-medium text-ink mb-1.5">Email</label>
           <input
+            id="login-email"
             type="email"
             required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-cloud focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-mid text-[15px]"
@@ -48,11 +50,13 @@ export default function LoginPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-ink mb-1.5">Password</label>
+          <label htmlFor="login-password" className="block text-sm font-medium text-ink mb-1.5">Password</label>
           <div className="relative">
             <input
+              id="login-password"
               type={showPassword ? 'text' : 'password'}
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-line bg-cloud focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-mid text-[15px]"

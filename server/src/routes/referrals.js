@@ -12,7 +12,7 @@ router.get('/', (req, res) => {
   const referrals = db
     .prepare(
       `SELECT r.*, d.full_name as doctor_name, d.clinic_name, d.phone as doctor_phone, d.specialty
-       FROM referrals r LEFT JOIN doctors d ON r.doctor_id = d.id
+       FROM referrals r LEFT JOIN doctors d ON r.doctor_id = d.id AND d.is_verified = 1
        WHERE r.user_id = ? ORDER BY r.created_at DESC`
     )
     .all(req.userId);
@@ -39,7 +39,7 @@ router.post(
       .get(conversationId, req.userId);
     if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
 
-    const doctor = db.prepare('SELECT id FROM doctors WHERE id = ?').get(doctorId);
+    const doctor = db.prepare('SELECT id FROM doctors WHERE id = ? AND is_verified = 1 AND accepts_referrals = 1').get(doctorId);
     if (!doctor) return res.status(404).json({ error: 'Doctor not found' });
 
     const id = randomUUID();

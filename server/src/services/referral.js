@@ -5,7 +5,7 @@ const db = require('../db');
  * Falls back to General Practice / Emergency Medicine if no specialty match.
  */
 function matchDoctors({ city, specialty, severity, limit = 5 }) {
-  let query = `SELECT * FROM doctors WHERE accepts_referrals = 1`;
+  let query = `SELECT id, full_name, specialty, clinic_name, city, region, address, phone, latitude, longitude, accepts_referrals FROM doctors WHERE is_verified = 1 AND accepts_referrals = 1`;
   const params = [];
 
   if (city) {
@@ -20,7 +20,7 @@ function matchDoctors({ city, specialty, severity, limit = 5 }) {
     params.push(specialty);
   }
 
-  query += ` ORDER BY rating DESC LIMIT ?`;
+  query += ` ORDER BY city, specialty, clinic_name, full_name LIMIT ?`;
   params.push(limit);
 
   let results = db.prepare(query).all(...params);
@@ -28,13 +28,8 @@ function matchDoctors({ city, specialty, severity, limit = 5 }) {
   // Fallback: if no specialty match, widen to General Practice in the same city
   if (results.length === 0 && city) {
     results = db
-      .prepare(`SELECT * FROM doctors WHERE city = ? AND specialty = 'General Practice' ORDER BY rating DESC LIMIT ?`)
+      .prepare(`SELECT id, full_name, specialty, clinic_name, city, region, address, phone, latitude, longitude, accepts_referrals FROM doctors WHERE is_verified = 1 AND accepts_referrals = 1 AND city = ? AND specialty = 'General Practice' ORDER BY clinic_name, full_name LIMIT ?`)
       .all(city, limit);
-  }
-
-  // Final fallback: any doctor, any city
-  if (results.length === 0) {
-    results = db.prepare(`SELECT * FROM doctors ORDER BY rating DESC LIMIT ?`).all(limit);
   }
 
   return results;

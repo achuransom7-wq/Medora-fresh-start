@@ -18,9 +18,34 @@ router.delete('/me', (req, res) => {
   res.status(204).send();
 });
 
+router.post(
+  '/me/consent',
+  [
+    body('termsAccepted').custom((value) => value === true),
+    body('healthDataConsent').custom((value) => value === true),
+    body('cookieNoticeAccepted').custom((value) => value === true),
+  ],
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: 'All acknowledgements are required.' });
+
+    db.prepare(
+      `UPDATE users SET terms_accepted_at = datetime('now'),
+        health_data_consent_at = datetime('now'),
+        cookie_notice_accepted_at = datetime('now'),
+        consent_policy_version = ? WHERE id = ?`
+    ).run('2026-10-11-v1', req.userId);
+
+    const consent = db.prepare(
+      'SELECT terms_accepted_at, health_data_consent_at, cookie_notice_accepted_at FROM users WHERE id = ?'
+    ).get(req.userId);
+    res.json({ consent });
+  }
+);
+
 router.get('/me', (req, res) => {
   const user = db
-    .prepare('SELECT id, full_name, email, phone, date_of_birth, sex, city, region, created_at FROM users WHERE id = ?')
+    .prepare('SELECT id, full_name, email, phone, date_of_birth, sex, city, region, created_at, terms_accepted_at, health_data_consent_at, cookie_notice_accepted_at FROM users WHERE id = ?')
     .get(req.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
 

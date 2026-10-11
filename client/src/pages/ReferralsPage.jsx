@@ -6,7 +6,7 @@ import Sidebar from '../components/Sidebar';
 import { severityStyle } from '../components/SeverityBadge';
 
 const STATUS_LABELS = {
-  pending: 'Pending',
+  pending: 'Saved in Medora',
   contacted: 'Contacted',
   completed: 'Completed',
   cancelled: 'Cancelled',
@@ -74,7 +74,7 @@ export default function ReferralsPage() {
 
         <div className="max-w-2xl mx-auto w-full px-4 py-8">
           <h1 className="font-display text-2xl font-semibold text-ink mb-1">Your referrals</h1>
-          <p className="text-ink-soft text-sm mb-6">Doctors you've requested to connect with, based on your consultations.</p>
+          <p className="text-ink-soft text-sm mb-6">These are saved referral notes only. Medora does not contact clinics or book appointments; confirm provider details and availability directly.</p>
 
           {loading ? (
             <p className="text-ink-soft text-sm">Loading…</p>
@@ -92,8 +92,8 @@ export default function ReferralsPage() {
                   <div key={r.id} className="bg-white border border-line rounded-2xl p-4">
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div>
-                        <p className="font-semibold text-ink text-sm">{r.doctor_name}</p>
-                        <p className="text-xs text-ink-soft mt-0.5">{r.specialty} · {r.clinic_name}</p>
+                        <p className="font-semibold text-ink text-sm">{r.doctor_name || 'Provider listing unavailable'}</p>
+                        <p className="text-xs text-ink-soft mt-0.5">{r.doctor_name ? `${r.specialty} · ${r.clinic_name}` : 'This provider has not been verified in Medora.'}</p>
                       </div>
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${s.bg} ${s.text} flex-shrink-0`}>
                         {STATUS_LABELS[r.status]}

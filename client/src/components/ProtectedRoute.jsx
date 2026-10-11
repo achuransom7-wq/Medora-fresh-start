@@ -1,8 +1,9 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -15,6 +16,11 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  const consentMissing = !user.terms_accepted_at || !user.health_data_consent_at || !user.cookie_notice_accepted_at;
+  if (consentMissing && location.pathname !== '/consent') {
+    return <Navigate to="/consent" replace state={{ from: location }} />;
+  }
 
   return children;
 }

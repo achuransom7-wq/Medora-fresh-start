@@ -11,7 +11,11 @@ CREATE TABLE IF NOT EXISTS users (
   city TEXT,
   region TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  terms_accepted_at TEXT,
+  health_data_consent_at TEXT,
+  cookie_notice_accepted_at TEXT,
+  consent_policy_version TEXT
 );
 
 CREATE TABLE IF NOT EXISTS user_health_profile (
@@ -68,7 +72,7 @@ CREATE TABLE IF NOT EXISTS doctors (
   latitude REAL,
   longitude REAL,
   accepts_referrals INTEGER NOT NULL DEFAULT 1,
-  rating REAL DEFAULT 4.5,
+  is_verified INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

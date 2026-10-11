@@ -31,7 +31,12 @@ function TrendChart({ series }) {
   });
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24">
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="w-full h-24"
+      role="img"
+      aria-label={`Trend of ${series.length} readings from ${min} to ${max}. Latest ${series[series.length - 1].value}.`}
+    >
       <polyline points={points.join(' ')} fill="none" stroke="var(--color-teal-mid)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
       {points.map((p, i) => {
         const [x, y] = p.split(',');
@@ -86,7 +91,9 @@ export default function VitalsPanel() {
       </div>
       <p className="text-xs text-ink-soft mb-4">Track vitals over time so Medora — and you — can spot patterns.</p>
 
+      <label htmlFor="vitals-type" className="sr-only">Vital measurement type</label>
       <select
+        id="vitals-type"
         value={type}
         onChange={(e) => setType(e.target.value)}
         className="w-full text-sm border border-line rounded-lg px-3 py-2 bg-cloud mb-3"
@@ -100,7 +107,9 @@ export default function VitalsPanel() {
 
       {adding && (
         <form onSubmit={logReading} className="flex gap-2 mb-4">
+          <label htmlFor="vitals-value" className="sr-only">Reading value{activeOption.unit ? ` in ${activeOption.unit}` : ''}</label>
           <input
+            id="vitals-value"
             type="number"
             step="any"
             value={value}

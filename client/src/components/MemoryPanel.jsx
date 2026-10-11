@@ -12,10 +12,10 @@ const CATEGORY_LABEL = {
 };
 
 const CATEGORY_COLOR = {
-  allergy: 'bg-coral-soft text-coral',
-  condition: 'bg-amber-soft text-amber',
+  allergy: 'bg-coral-soft text-coral-ink',
+  condition: 'bg-amber-soft text-amber-ink',
   medication: 'bg-mint text-teal-deep',
-  pattern: 'bg-orange-soft text-orange-alert',
+  pattern: 'bg-orange-soft text-orange-ink',
   preference: 'bg-cloud text-ink-soft',
   other: 'bg-cloud text-ink-soft',
 };
@@ -76,7 +76,9 @@ export default function MemoryPanel() {
 
       {adding && (
         <form onSubmit={addMemory} className="flex flex-col sm:flex-row gap-2 mb-4">
+          <label htmlFor="memory-category" className="sr-only">Memory category</label>
           <select
+            id="memory-category"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
             className="text-sm border border-line rounded-lg px-2 py-2 bg-cloud"
@@ -87,7 +89,9 @@ export default function MemoryPanel() {
               </option>
             ))}
           </select>
+          <label htmlFor="memory-content" className="sr-only">Memory details</label>
           <input
+            id="memory-content"
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
             placeholder="e.g. Allergic to penicillin"
@@ -111,7 +115,7 @@ export default function MemoryPanel() {
                 {CATEGORY_LABEL[m.category]}
               </span>
               <p className="flex-1 text-sm text-ink">{m.content}</p>
-              <button onClick={() => forget(m.id)} aria-label="Forget this" className="text-ink-soft/60 hover:text-coral flex-shrink-0">
+              <button onClick={() => forget(m.id)} aria-label="Forget this memory" className="text-ink-soft hover:text-coral-ink flex-shrink-0">
                 <X size={14} />
               </button>
             </div>

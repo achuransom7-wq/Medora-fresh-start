@@ -52,7 +52,9 @@ export default function ResearchPanel({ seedText, conversationId, onClose }) {
         </button>
       </div>
 
+      <label htmlFor="research-query" className="sr-only">Health research question</label>
       <textarea
+        id="research-query"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         rows={2}
@@ -65,13 +67,13 @@ export default function ResearchPanel({ seedText, conversationId, onClose }) {
         disabled={loading || !query.trim()}
         className="mt-2 bg-teal-deep text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-teal-mid transition-colors disabled:opacity-40"
       >
-        {loading ? 'Researching…' : 'Search verified sources'}
+        {loading ? 'Researching…' : 'Research this question'}
       </button>
 
-      {error && <p className="text-sm text-coral mt-3">{error}</p>}
+      {error && <p role="alert" className="text-sm text-coral-ink mt-3">{error}</p>}
 
       {report && (
-        <div className="mt-4 border-t border-line pt-3">
+        <div aria-live="polite" className="mt-4 border-t border-line pt-3">
           <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-ink">{report.content}</p>
           {report.sources?.length > 0 && (
             <div className="mt-3">
@@ -85,7 +87,7 @@ export default function ResearchPanel({ seedText, conversationId, onClose }) {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-xs text-teal-mid hover:text-teal-deep hover:underline break-all"
                   >
-                    <ExternalLink size={11} className="flex-shrink-0" /> {s.title}
+                    <ExternalLink size={11} aria-hidden="true" className="flex-shrink-0" /> {s.title}<span className="sr-only"> (opens in a new tab)</span>
                   </a>
                 ))}
               </div>
