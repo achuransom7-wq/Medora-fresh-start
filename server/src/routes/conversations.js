@@ -11,6 +11,7 @@ const { getConsultationResponse, generateTitle, generateCareSummary } = require(
 const { matchDoctors, inferSpecialty } = require('../services/referral');
 const { SEVERITY_META } = require('../services/triage');
 const { extractAndStoreMemories, getActiveMemories } = require('../services/localMemory');
+const ensureWritableDirectory = require('../utils/ensureWritableDirectory');
 
 const router = express.Router();
 router.use(authenticate);
@@ -25,7 +26,7 @@ const chatLimiter = rateLimit({
 
 // --- File upload setup (photos of rashes/injuries, lab results, prescriptions) ---
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../data/uploads');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+ensureWritableDirectory(UPLOAD_DIR, 'Upload storage');
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']);
 
