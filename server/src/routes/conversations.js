@@ -61,20 +61,20 @@ function receiveUploads(req, res, next) {
   });
 }
 
-function getPreferences(userId) {
-  let prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+async function getPreferences(userId) {
+  let prefs = await db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
   if (!prefs) {
-    db.prepare('INSERT INTO user_preferences (user_id) VALUES (?)').run(userId);
-    prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+    await db.prepare('INSERT INTO user_preferences (user_id) VALUES (?)').run(userId);
+    prefs = await db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
   }
   return prefs;
 }
 
-function requireOwnedConversation(req, res, next) {
+async function requireOwnedConversation(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid conversation id' });
 
-  const conversation = db
+  const conversation = await db
     .prepare('SELECT * FROM conversations WHERE id = ? AND user_id = ?')
     .get(req.params.id, req.userId);
   if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
@@ -84,9 +84,9 @@ function requireOwnedConversation(req, res, next) {
 }
 
 // List all conversations for the logged-in user (optionally filtered by project)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { projectId } = req.query;
-  const conversations = projectId
+  const conversations = await (projectId
     ? db
         .prepare(
           `SELECT id, title, status, latest_severity, project_id, created_at, updated_at
@@ -98,26 +98,26 @@ router.get('/', (req, res) => {
           `SELECT id, title, status, latest_severity, project_id, created_at, updated_at
            FROM conversations WHERE user_id = ? ORDER BY updated_at DESC`
         )
-        .all(req.userId);
+        .all(req.userId));
   res.json({ conversations });
 });
 
 // Get a single conversation with all messages + any attachments
-router.get('/:id', param('id').isUUID(), (req, res) => {
+router.get('/:id', param('id').isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid conversation id' });
 
-  const conversation = db
+  const conversation = await db
     .prepare('SELECT * FROM conversations WHERE id = ? AND user_id = ?')
     .get(req.params.id, req.userId);
 
   if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
 
-  const messages = db
+  const messages = await db
     .prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC')
     .all(conversation.id);
 
-  const attachments = db
+  const attachments = await db
     .prepare(
       'SELECT id, message_id, kind, original_name, mime_type, size_bytes, created_at FROM attachments WHERE conversation_id = ?'
     )
@@ -134,11 +134,11 @@ router.patch(
     body('title').optional().trim().isLength({ min: 1, max: 120 }),
     body('projectId').optional({ nullable: true }).isUUID(),
   ],
-  (req, res) => {
+  async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid conversation update' });
 
-  const conversation = db
+  const conversation = await db
     .prepare('SELECT id FROM conversations WHERE id = ? AND user_id = ?')
     .get(req.params.id, req.userId);
   if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
@@ -151,7 +151,7 @@ router.patch(
   }
   if (req.body.projectId !== undefined) {
     if (req.body.projectId) {
-      const project = db.prepare('SELECT id FROM projects WHERE id = ? AND user_id = ?').get(req.body.projectId, req.userId);
+      const project = await db.prepare('SELECT id FROM projects WHERE id = ? AND user_id = ?').get(req.body.projectId, req.userId);
       if (!project) return res.status(404).json({ error: 'Project not found' });
     }
     fields.push('project_id = ?');
@@ -159,46 +159,46 @@ router.patch(
   }
   if (fields.length) {
     values.push(conversation.id);
-    db.prepare(`UPDATE conversations SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
+    await db.prepare(`UPDATE conversations SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
   }
-  res.json({ conversation: db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversation.id) });
+  res.json({ conversation: await db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversation.id) });
   }
 );
 
 // Delete a conversation owned by the logged-in user
-router.delete('/:id', param('id').isUUID(), (req, res) => {
+router.delete('/:id', param('id').isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid conversation id' });
 
-  const conversation = db
+  const conversation = await db
     .prepare('SELECT id FROM conversations WHERE id = ? AND user_id = ?')
     .get(req.params.id, req.userId);
   if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
 
-  const attachments = db.prepare('SELECT file_path FROM attachments WHERE conversation_id = ?').all(conversation.id);
-  db.prepare('DELETE FROM conversations WHERE id = ?').run(conversation.id);
+  const attachments = await db.prepare('SELECT file_path FROM attachments WHERE conversation_id = ?').all(conversation.id);
+  await db.prepare('DELETE FROM conversations WHERE id = ?').run(conversation.id);
   attachments.forEach(({ file_path }) => fs.unlink(file_path, () => {}));
   res.status(204).send();
 });
 
 // Create a new conversation (optionally inside a project/case thread)
-router.post('/', body('projectId').optional().isUUID(), (req, res) => {
+router.post('/', body('projectId').optional().isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid project id' });
 
   const { projectId } = req.body || {};
   if (projectId) {
-    const project = db.prepare('SELECT id FROM projects WHERE id = ? AND user_id = ?').get(projectId, req.userId);
+    const project = await db.prepare('SELECT id FROM projects WHERE id = ? AND user_id = ?').get(projectId, req.userId);
     if (!project) return res.status(404).json({ error: 'Project not found' });
   }
 
   const id = randomUUID();
-  db.prepare(`INSERT INTO conversations (id, user_id, project_id, title) VALUES (?, ?, ?, 'New consultation')`).run(
+  await db.prepare(`INSERT INTO conversations (id, user_id, project_id, title) VALUES (?, ?, ?, 'New consultation')`).run(
     id,
     req.userId,
     projectId || null
   );
-  const conversation = db.prepare('SELECT * FROM conversations WHERE id = ?').get(id);
+  const conversation = await db.prepare('SELECT * FROM conversations WHERE id = ?').get(id);
   res.status(201).json({ conversation });
 });
 
@@ -224,35 +224,36 @@ router.post(
 
     try {
       // Load prior messages for context (last 20 turns to keep it bounded)
-      const priorMessages = db
+      const priorMessages = await db
         .prepare(
           `SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC LIMIT 20`
         )
         .all(conversation.id);
 
-      const healthProfile = db
+      const healthProfile = await db
         .prepare('SELECT * FROM user_health_profile WHERE user_id = ?')
         .get(req.userId);
 
-      const memories = getActiveMemories(req.userId);
-      const preferences = getPreferences(req.userId);
+      const memories = await getActiveMemories(req.userId);
+      const preferences = await getPreferences(req.userId);
 
       // Save user message
       const userMsgId = randomUUID();
-      db.prepare(
+      await db.prepare(
         `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'user', ?)`
       ).run(userMsgId, conversation.id, content);
 
       // Persist attachment records for any uploaded files
-      const attachments = (req.files || []).map((f) => {
+      const attachments = [];
+      for (const f of req.files || []) {
         const attId = randomUUID();
         const kind = f.mimetype.startsWith('image/') ? 'image' : 'document';
-        db.prepare(
+        await db.prepare(
           `INSERT INTO attachments (id, message_id, conversation_id, user_id, kind, original_name, mime_type, file_path, size_bytes)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).run(attId, userMsgId, conversation.id, req.userId, kind, f.originalname, f.mimetype, f.path, f.size);
-        return { id: attId, kind, original_name: f.originalname, mime_type: f.mimetype, file_path: f.path };
-      });
+        attachments.push({ id: attId, kind, original_name: f.originalname, mime_type: f.mimetype, file_path: f.path });
+      }
 
       // Get AI response (vision-aware, memory-aware, style/language-aware)
       const { text, severity, redFlagOverride, differential } = await getConsultationResponse(priorMessages, content, {
@@ -266,12 +267,12 @@ router.post(
 
       // Save assistant message
       const assistantMsgId = randomUUID();
-      db.prepare(
+      await db.prepare(
         `INSERT INTO messages (id, conversation_id, role, content, severity) VALUES (?, ?, 'assistant', ?, ?)`
       ).run(assistantMsgId, conversation.id, text, severity);
 
       // Update conversation severity + timestamp
-      db.prepare(
+      await db.prepare(
         `UPDATE conversations SET latest_severity = ?, updated_at = datetime('now') WHERE id = ?`
       ).run(severity, conversation.id);
 
@@ -279,7 +280,7 @@ router.post(
       let conversationTitle = conversation.title;
       if (conversation.title === 'New consultation' && priorMessages.length === 0) {
         conversationTitle = await generateTitle(content);
-        db.prepare(`UPDATE conversations SET title = ? WHERE id = ?`).run(conversationTitle, conversation.id);
+        await db.prepare(`UPDATE conversations SET title = ? WHERE id = ?`).run(conversationTitle, conversation.id);
       }
 
       // Best-effort: learn durable facts for future visits (never blocks the response)
@@ -294,8 +295,8 @@ router.post(
       let referralSuggestion = null;
       if (severity === 'see_doctor' || severity === 'urgent') {
         const specialty = inferSpecialty(content);
-        const user = db.prepare('SELECT city FROM users WHERE id = ?').get(req.userId);
-        const doctors = matchDoctors({ city: user?.city, specialty, severity, limit: 3 });
+        const user = await db.prepare('SELECT city FROM users WHERE id = ?').get(req.userId);
+        const doctors = await matchDoctors({ city: user?.city, specialty, severity, limit: 3 });
         referralSuggestion = { specialty, doctors };
       }
 
@@ -328,11 +329,11 @@ router.post(
 );
 
 // Stream/serve an attachment file (owner-only)
-router.get('/attachments/:attachmentId/file', param('attachmentId').isUUID(), (req, res) => {
+router.get('/attachments/:attachmentId/file', param('attachmentId').isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid attachment id' });
 
-  const att = db
+  const att = await db
     .prepare('SELECT * FROM attachments WHERE id = ? AND user_id = ?')
     .get(req.params.attachmentId, req.userId);
   if (!att) return res.status(404).json({ error: 'Attachment not found' });
@@ -350,17 +351,17 @@ router.get('/:id/summary', param('id').isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid conversation id' });
 
-  const conversation = db
+  const conversation = await db
     .prepare('SELECT * FROM conversations WHERE id = ? AND user_id = ?')
     .get(req.params.id, req.userId);
   if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
 
-  const messages = db
+  const messages = await db
     .prepare('SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC')
     .all(conversation.id);
   if (messages.length === 0) return res.status(400).json({ error: 'Nothing to summarize yet' });
 
-  const user = db.prepare('SELECT full_name FROM users WHERE id = ?').get(req.userId);
+  const user = await db.prepare('SELECT full_name FROM users WHERE id = ?').get(req.userId);
 
   try {
     const summary = await generateCareSummary(messages, {
@@ -382,35 +383,35 @@ router.patch(
     body('status').optional().isIn(['active', 'resolved', 'referred', 'archived']),
     body('projectId').optional({ nullable: true }).isUUID(),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-    const conversation = db
+    const conversation = await db
       .prepare('SELECT * FROM conversations WHERE id = ? AND user_id = ?')
       .get(req.params.id, req.userId);
     if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
 
     if (req.body.status) {
-      db.prepare(`UPDATE conversations SET status = ?, updated_at = datetime('now') WHERE id = ?`).run(
+      await db.prepare(`UPDATE conversations SET status = ?, updated_at = datetime('now') WHERE id = ?`).run(
         req.body.status,
         conversation.id
       );
     }
     if (req.body.projectId !== undefined) {
-      db.prepare(`UPDATE conversations SET project_id = ?, updated_at = datetime('now') WHERE id = ?`).run(
+      await db.prepare(`UPDATE conversations SET project_id = ?, updated_at = datetime('now') WHERE id = ?`).run(
         req.body.projectId,
         conversation.id
       );
     }
-    const updated = db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversation.id);
+    const updated = await db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversation.id);
     res.json({ conversation: updated });
   }
 );
 
 // Delete a conversation
-router.delete('/:id', param('id').isUUID(), (req, res) => {
-  const result = db.prepare('DELETE FROM conversations WHERE id = ? AND user_id = ?').run(
+router.delete('/:id', param('id').isUUID(), async (req, res) => {
+  const result = await db.prepare('DELETE FROM conversations WHERE id = ? AND user_id = ?').run(
     req.params.id,
     req.userId
   );

@@ -18,15 +18,15 @@ const TYPES = [
 ];
 
 // List logged entries (optionally filtered by type)
-router.get('/', query('type').optional().isIn(TYPES), (req, res) => {
+router.get('/', query('type').optional().isIn(TYPES), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-  const entries = req.query.type
+  const entries = await (req.query.type
     ? db
         .prepare('SELECT * FROM vitals_logs WHERE user_id = ? AND type = ? ORDER BY recorded_at ASC')
         .all(req.userId, req.query.type)
-    : db.prepare('SELECT * FROM vitals_logs WHERE user_id = ? ORDER BY recorded_at ASC').all(req.userId);
+    : db.prepare('SELECT * FROM vitals_logs WHERE user_id = ? ORDER BY recorded_at ASC').all(req.userId));
   res.json({ entries });
 });
 
@@ -40,27 +40,27 @@ router.post(
     body('note').optional().trim().isLength({ max: 300 }),
     body('recordedAt').optional().isISO8601(),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
     const id = randomUUID();
-    db.prepare(
+    await db.prepare(
       `INSERT INTO vitals_logs (id, user_id, type, value, unit, note, recorded_at)
        VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`
     ).run(id, req.userId, req.body.type, req.body.value, req.body.unit || null, req.body.note || null, req.body.recordedAt || null);
 
-    res.status(201).json({ entry: db.prepare('SELECT * FROM vitals_logs WHERE id = ?').get(id) });
+    res.status(201).json({ entry: await db.prepare('SELECT * FROM vitals_logs WHERE id = ?').get(id) });
   }
 );
 
 // Simple trend analysis for one vital type: min/max/avg/latest/delta + a sparse series for charting.
 // This is Medora's "data analysis" feature — plain-JS stats, no external service needed.
-router.get('/summary', query('type').isIn(TYPES), (req, res) => {
+router.get('/summary', query('type').isIn(TYPES), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-  const rows = db
+  const rows = await db
     .prepare('SELECT value, recorded_at FROM vitals_logs WHERE user_id = ? AND type = ? ORDER BY recorded_at ASC')
     .all(req.userId, req.query.type);
 
@@ -85,8 +85,8 @@ router.get('/summary', query('type').isIn(TYPES), (req, res) => {
   });
 });
 
-router.delete('/:id', (req, res) => {
-  const result = db.prepare('DELETE FROM vitals_logs WHERE id = ? AND user_id = ?').run(req.params.id, req.userId);
+router.delete('/:id', async (req, res) => {
+  const result = await db.prepare('DELETE FROM vitals_logs WHERE id = ? AND user_id = ?').run(req.params.id, req.userId);
   if (result.changes === 0) return res.status(404).json({ error: 'Entry not found' });
   res.json({ success: true });
 });

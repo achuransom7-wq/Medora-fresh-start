@@ -21,12 +21,12 @@ function hashToken(token) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function issueTokens(res, userId) {
+async function issueTokens(res, userId) {
   const accessToken = signAccessToken(userId);
   const refreshToken = signRefreshToken(userId);
 
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  db.prepare(`INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)`).run(
+  await db.prepare(`INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)`).run(
     randomUUID(),
     userId,
     hashToken(refreshToken),
@@ -59,28 +59,28 @@ router.post(
     body('healthDataConsent').custom((value) => value === true).withMessage('You must consent to health-data processing'),
     body('cookieNoticeAccepted').custom((value) => value === true).withMessage('You must acknowledge the essential session cookie'),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
     const { fullName, email, password, phone, city, region } = req.body;
 
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (existing) return res.status(409).json({ error: 'An account with this email already exists' });
 
     const id = randomUUID();
     const passwordHash = bcrypt.hashSync(password, 12);
 
-    db.prepare(
+    await db.prepare(
       `INSERT INTO users (
         id, full_name, email, phone, password_hash, city, region,
         terms_accepted_at, health_data_consent_at, cookie_notice_accepted_at, consent_policy_version
       ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'), ?)`
     ).run(id, fullName, email, phone || null, passwordHash, city || null, region || null, '2026-10-11-v1');
 
-    db.prepare(`INSERT INTO user_health_profile (user_id) VALUES (?)`).run(id);
+    await db.prepare(`INSERT INTO user_health_profile (user_id) VALUES (?)`).run(id);
 
-    const accessToken = issueTokens(res, id);
+    const accessToken = await issueTokens(res, id);
     res.status(201).json({
       accessToken,
       user: {
@@ -105,18 +105,18 @@ router.post(
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty().custom((value) => typeof value === 'string' && Buffer.byteLength(value, 'utf8') <= 72),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid email or password' });
 
     const { email, password } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
 
     if (!user || !bcrypt.compareSync(password, user.password_hash)) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const accessToken = issueTokens(res, user.id);
+    const accessToken = await issueTokens(res, user.id);
     res.json({
       accessToken,
       user: {
@@ -134,34 +134,35 @@ router.post(
   }
 );
 
-router.post('/refresh', (req, res) => {
+router.post('/refresh', async (req, res) => {
   const token = req.cookies?.medora_refresh;
   if (!token) return res.status(401).json({ error: 'No refresh token provided' });
 
+  let payload;
   try {
-    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     if (payload.type !== 'refresh') throw new Error('Invalid token type');
-
-    const tokenHash = hashToken(token);
-    const stored = db
-      .prepare('SELECT * FROM refresh_tokens WHERE user_id = ? AND token_hash = ?')
-      .get(payload.sub, tokenHash);
-
-    if (!stored || new Date(stored.expires_at) < new Date()) {
-      return res.status(401).json({ error: 'Refresh token expired or invalid' });
-    }
-
-    const accessToken = signAccessToken(payload.sub);
-    res.json({ accessToken });
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: 'Invalid refresh token' });
   }
+
+  const tokenHash = hashToken(token);
+  const stored = await db
+    .prepare('SELECT * FROM refresh_tokens WHERE user_id = ? AND token_hash = ?')
+    .get(payload.sub, tokenHash);
+
+  if (!stored || new Date(stored.expires_at) < new Date()) {
+    return res.status(401).json({ error: 'Refresh token expired or invalid' });
+  }
+
+  const accessToken = signAccessToken(payload.sub);
+  res.json({ accessToken });
 });
 
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
   const token = req.cookies?.medora_refresh;
   if (token) {
-    db.prepare('DELETE FROM refresh_tokens WHERE token_hash = ?').run(hashToken(token));
+    await db.prepare('DELETE FROM refresh_tokens WHERE token_hash = ?').run(hashToken(token));
   }
   res.clearCookie('medora_refresh', { path: '/api/auth' });
   res.json({ success: true });

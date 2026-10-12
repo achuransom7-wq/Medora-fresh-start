@@ -10,8 +10,8 @@ const router = express.Router();
 router.use(authenticate);
 
 // List all projects (case threads) with a conversation count
-router.get('/', (req, res) => {
-  const projects = db
+router.get('/', async (req, res) => {
+  const projects = await db
     .prepare(
       `SELECT p.*, COUNT(c.id) as conversation_count
        FROM projects p
@@ -28,18 +28,18 @@ router.get('/', (req, res) => {
 router.post(
   '/',
   [body('title').trim().isLength({ min: 2, max: 120 }), body('description').optional().trim().isLength({ max: 500 })],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
     const id = randomUUID();
-    db.prepare('INSERT INTO projects (id, user_id, title, description) VALUES (?, ?, ?, ?)').run(
+    await db.prepare('INSERT INTO projects (id, user_id, title, description) VALUES (?, ?, ?, ?)').run(
       id,
       req.userId,
       req.body.title,
       req.body.description || null
     );
-    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    const project = await db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
     res.status(201).json({ project });
   }
 );
@@ -49,10 +49,10 @@ router.get('/:id/summary', param('id').isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid thread id' });
 
-  const project = db.prepare('SELECT id, title, user_id FROM projects WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+  const project = await db.prepare('SELECT id, title, user_id FROM projects WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
   if (!project) return res.status(404).json({ error: 'Thread not found' });
 
-  const messages = db
+  const messages = await db
     .prepare(
       `SELECT c.id AS conversation_id, m.role, m.content, m.severity
        FROM messages m
@@ -65,7 +65,7 @@ router.get('/:id/summary', param('id').isUUID(), async (req, res) => {
   if (!messages.length) return res.status(400).json({ error: 'This thread has no consultations to summarize yet.' });
 
   try {
-    const user = db.prepare('SELECT full_name FROM users WHERE id = ?').get(req.userId);
+    const user = await db.prepare('SELECT full_name FROM users WHERE id = ?').get(req.userId);
     const latestSeverity = [...messages].reverse().find((message) => message.role === 'assistant' && message.severity)?.severity;
     const summary = await generateCareSummary(messages, {
       patientName: user?.full_name,
@@ -88,11 +88,11 @@ router.patch(
     body('description').optional().trim().isLength({ max: 500 }),
     body('status').optional().isIn(['active', 'resolved', 'archived']),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-    const project = db.prepare('SELECT * FROM projects WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    const project = await db.prepare('SELECT * FROM projects WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
     const fields = [];
@@ -105,25 +105,24 @@ router.patch(
     }
     if (fields.length) {
       values.push(project.id);
-      db.prepare(`UPDATE projects SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
+      await db.prepare(`UPDATE projects SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
     }
-    res.json({ project: db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) });
+    res.json({ project: await db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) });
   }
 );
 
 // Delete a project (conversations are kept, just unlinked — see schema ON DELETE SET NULL)
-router.delete('/:id', param('id').isUUID(), (req, res) => {
-  const project = db.prepare('SELECT id FROM projects WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+router.delete('/:id', param('id').isUUID(), async (req, res) => {
+  const project = await db.prepare('SELECT id FROM projects WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  const attachments = db
+  const attachments = await db
     .prepare('SELECT file_path FROM attachments WHERE conversation_id IN (SELECT id FROM conversations WHERE project_id = ?)')
     .all(project.id);
-  const deleteThread = db.transaction(() => {
-    db.prepare('DELETE FROM conversations WHERE project_id = ? AND user_id = ?').run(project.id, req.userId);
-    db.prepare('DELETE FROM projects WHERE id = ? AND user_id = ?').run(project.id, req.userId);
-  });
-  deleteThread();
+  await db.batch([
+    { sql: 'DELETE FROM conversations WHERE project_id = ? AND user_id = ?', args: [project.id, req.userId] },
+    { sql: 'DELETE FROM projects WHERE id = ? AND user_id = ?', args: [project.id, req.userId] },
+  ]);
   attachments.forEach(({ file_path }) => fs.unlink(file_path, () => {}));
   res.json({ success: true });
 });

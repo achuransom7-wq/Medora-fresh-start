@@ -33,12 +33,12 @@ router.post(
     body('outcome').isIn(['confirmed', 'corrected']),
     body('conversationId').optional().isUUID(),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
     try {
-      recordFeedback({
+      await recordFeedback({
         userId: req.userId,
         conversationId: req.body.conversationId || null,
         diseaseName: req.body.diseaseName,
@@ -46,14 +46,15 @@ router.post(
       });
       res.status(201).json({ success: true });
     } catch (err) {
+      console.error('Local-agent feedback error:', err);
       res.status(500).json({ error: 'Could not record feedback right now.' });
     }
   }
 );
 
 // See what the agent has learned so far (counts per disease) — handy for a debug/admin view
-router.get('/learning-stats', (req, res) => {
-  res.json({ stats: getLearningStats() });
+router.get('/learning-stats', async (req, res) => {
+  res.json({ stats: await getLearningStats() });
 });
 
 module.exports = router;

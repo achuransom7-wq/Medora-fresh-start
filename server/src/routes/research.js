@@ -34,7 +34,7 @@ router.post(
     const { query, conversationId, context } = req.body;
 
     if (conversationId) {
-      const conversation = db
+      const conversation = await db
         .prepare('SELECT id FROM conversations WHERE id = ? AND user_id = ?')
         .get(conversationId, req.userId);
       if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
@@ -44,7 +44,7 @@ router.post(
       const { content, sources } = await researchHealthTopic(query, { conversationContext: context });
 
       const id = randomUUID();
-      db.prepare(
+      await db.prepare(
         `INSERT INTO research_reports (id, conversation_id, user_id, query, content, sources) VALUES (?, ?, ?, ?, ?, ?)`
       ).run(id, conversationId || null, req.userId, query, content, JSON.stringify(sources));
 
@@ -57,13 +57,13 @@ router.post(
 );
 
 // List past research reports (optionally scoped to a conversation)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { conversationId } = req.query;
-  const rows = conversationId
+  const rows = await (conversationId
     ? db
         .prepare('SELECT * FROM research_reports WHERE user_id = ? AND conversation_id = ? ORDER BY created_at DESC')
         .all(req.userId, conversationId)
-    : db.prepare('SELECT * FROM research_reports WHERE user_id = ? ORDER BY created_at DESC').all(req.userId);
+    : db.prepare('SELECT * FROM research_reports WHERE user_id = ? ORDER BY created_at DESC').all(req.userId));
 
   res.json({ reports: rows.map((r) => ({ ...r, sources: JSON.parse(r.sources || '[]') })) });
 });

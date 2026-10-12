@@ -40,7 +40,7 @@
 
 const { checkRedFlags, escalate } = require('./triage');
 const { runDifferential } = require('./localDifferential');
-const { logShown, getLearningMultiplier } = require('./localLearning');
+const { logShown, getLearningMultipliers } = require('./localLearning');
 const { classifyIntent, respondToIntent } = require('./localIntent');
 const { answerKnowledgeQuestion } = require('./localKnowledgeQA');
 const ollama = require('./ollamaClient');
@@ -197,8 +197,11 @@ async function getConsultationResponse(history, userMessage, opts = {}) {
   const isFollowUp = priorSymptomTurns.length > 0;
   const { note: attachmentNote, base64Images } = describeAttachments(attachments);
 
-  const { candidates } = runDifferential(combinedText, { getLearningMultiplier });
-  if (candidates.length) logShown({ userId, conversationId, candidates });
+  const learningMultipliers = await getLearningMultipliers();
+  const { candidates } = runDifferential(combinedText, {
+    getLearningMultiplier: (name) => learningMultipliers.get(name) ?? 1,
+  });
+  if (candidates.length) await logShown({ userId, conversationId, candidates });
 
   let severity;
   let text;
@@ -258,7 +261,10 @@ async function generateTitle(firstMessage) {
     return 'General question';
   }
   if (intent !== 'symptom') return 'New conversation';
-  const { candidates } = runDifferential(firstMessage, { getLearningMultiplier });
+  const learningMultipliers = await getLearningMultipliers();
+  const { candidates } = runDifferential(firstMessage, {
+    getLearningMultiplier: (name) => learningMultipliers.get(name) ?? 1,
+  });
   if (candidates.length) return candidates[0].name;
   const words = firstMessage
     .toLowerCase()
@@ -288,7 +294,10 @@ async function generateCareSummary(history, { patientName, latestSeverity } = {}
     }
   }
   const combinedText = symptomTurns.join('. ');
-  const { candidates } = runDifferential(combinedText, { getLearningMultiplier });
+  const learningMultipliers = await getLearningMultipliers();
+  const { candidates } = runDifferential(combinedText, {
+    getLearningMultiplier: (name) => learningMultipliers.get(name) ?? 1,
+  });
 
   const symptomBullets = userMessages.length ? userMessages.map((m) => `- ${m}`).join('\n') : '- Not specified';
 

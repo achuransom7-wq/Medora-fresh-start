@@ -76,14 +76,10 @@ async function extractAndStoreMemories({ userId, conversationId, userMessage, as
     const facts = [...patternFacts, ...ollamaFacts];
     if (!facts.length) return;
 
-    const existing = db
+    const existing = (await db
       .prepare('SELECT content FROM memories WHERE user_id = ? AND active = 1')
-      .all(userId)
+      .all(userId))
       .map((r) => r.content.toLowerCase());
-
-    const insert = db.prepare(
-      `INSERT INTO memories (id, user_id, category, content, source_conversation_id) VALUES (?, ?, ?, ?, ?)`
-    );
 
     for (const fact of facts) {
       if (!fact?.content || typeof fact.content !== 'string') continue;
@@ -92,7 +88,9 @@ async function extractAndStoreMemories({ userId, conversationId, userMessage, as
       const category = ['allergy', 'condition', 'medication', 'pattern', 'preference', 'other'].includes(fact.category)
         ? fact.category
         : 'other';
-      insert.run(randomUUID(), userId, category, fact.content.slice(0, 500), conversationId);
+      await db
+        .prepare(`INSERT INTO memories (id, user_id, category, content, source_conversation_id) VALUES (?, ?, ?, ?, ?)`)
+        .run(randomUUID(), userId, category, fact.content.slice(0, 500), conversationId);
       existing.push(fact.content.toLowerCase()); // avoid inserting near-duplicates within the same call
     }
   } catch (err) {
@@ -100,7 +98,7 @@ async function extractAndStoreMemories({ userId, conversationId, userMessage, as
   }
 }
 
-function getActiveMemories(userId) {
+async function getActiveMemories(userId) {
   return db
     .prepare('SELECT * FROM memories WHERE user_id = ? AND active = 1 ORDER BY created_at DESC')
     .all(userId);

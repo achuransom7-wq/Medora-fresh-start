@@ -7,11 +7,11 @@ const router = express.Router();
 router.use(authenticate);
 
 // List everything Medora remembers about the patient (active by default)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const includeInactive = req.query.includeInactive === 'true';
-  const memories = includeInactive
+  const memories = await (includeInactive
     ? db.prepare('SELECT * FROM memories WHERE user_id = ? ORDER BY created_at DESC').all(req.userId)
-    : db.prepare('SELECT * FROM memories WHERE user_id = ? AND active = 1 ORDER BY created_at DESC').all(req.userId);
+    : db.prepare('SELECT * FROM memories WHERE user_id = ? AND active = 1 ORDER BY created_at DESC').all(req.userId));
   res.json({ memories });
 });
 
@@ -22,19 +22,19 @@ router.post(
     body('content').trim().isLength({ min: 2, max: 500 }),
     body('category').isIn(['allergy', 'condition', 'medication', 'pattern', 'preference', 'other']),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
     const { randomUUID } = require('crypto');
     const id = randomUUID();
-    db.prepare('INSERT INTO memories (id, user_id, category, content) VALUES (?, ?, ?, ?)').run(
+    await db.prepare('INSERT INTO memories (id, user_id, category, content) VALUES (?, ?, ?, ?)').run(
       id,
       req.userId,
       req.body.category,
       req.body.content
     );
-    res.status(201).json({ memory: db.prepare('SELECT * FROM memories WHERE id = ?').get(id) });
+    res.status(201).json({ memory: await db.prepare('SELECT * FROM memories WHERE id = ?').get(id) });
   }
 );
 
@@ -46,11 +46,11 @@ router.patch(
     body('content').optional().trim().isLength({ min: 2, max: 500 }),
     body('active').optional().isBoolean(),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-    const memory = db.prepare('SELECT * FROM memories WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    const memory = await db.prepare('SELECT * FROM memories WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
     if (!memory) return res.status(404).json({ error: 'Memory not found' });
 
     const fields = [];
@@ -65,15 +65,15 @@ router.patch(
     }
     if (fields.length) {
       values.push(memory.id);
-      db.prepare(`UPDATE memories SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
+      await db.prepare(`UPDATE memories SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
     }
-    res.json({ memory: db.prepare('SELECT * FROM memories WHERE id = ?').get(memory.id) });
+    res.json({ memory: await db.prepare('SELECT * FROM memories WHERE id = ?').get(memory.id) });
   }
 );
 
 // Permanently delete a memory
-router.delete('/:id', param('id').isUUID(), (req, res) => {
-  const result = db.prepare('DELETE FROM memories WHERE id = ? AND user_id = ?').run(req.params.id, req.userId);
+router.delete('/:id', param('id').isUUID(), async (req, res) => {
+  const result = await db.prepare('DELETE FROM memories WHERE id = ? AND user_id = ?').run(req.params.id, req.userId);
   if (result.changes === 0) return res.status(404).json({ error: 'Memory not found' });
   res.json({ success: true });
 });

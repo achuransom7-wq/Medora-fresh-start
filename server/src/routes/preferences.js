@@ -6,17 +6,17 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 router.use(authenticate);
 
-function getOrCreate(userId) {
-  let prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+async function getOrCreate(userId) {
+  let prefs = await db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
   if (!prefs) {
-    db.prepare('INSERT INTO user_preferences (user_id) VALUES (?)').run(userId);
-    prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+    await db.prepare('INSERT INTO user_preferences (user_id) VALUES (?)').run(userId);
+    prefs = await db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
   }
   return prefs;
 }
 
-router.get('/', (req, res) => {
-  res.json({ preferences: getOrCreate(req.userId) });
+router.get('/', async (req, res) => {
+  res.json({ preferences: await getOrCreate(req.userId) });
 });
 
 router.put(
@@ -27,11 +27,11 @@ router.put(
     body('voiceEnabled').optional().isBoolean(),
     body('autoSpeakReplies').optional().isBoolean(),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-    getOrCreate(req.userId); // ensure row exists
+    await getOrCreate(req.userId);
 
     const map = {
       communicationStyle: 'communication_style',
@@ -49,11 +49,11 @@ router.put(
     }
     if (fields.length) {
       values.push(req.userId);
-      db.prepare(`UPDATE user_preferences SET ${fields.join(', ')}, updated_at = datetime('now') WHERE user_id = ?`).run(
+      await db.prepare(`UPDATE user_preferences SET ${fields.join(', ')}, updated_at = datetime('now') WHERE user_id = ?`).run(
         ...values
       );
     }
-    res.json({ preferences: db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(req.userId) });
+    res.json({ preferences: await db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(req.userId) });
   }
 );
 

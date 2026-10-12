@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const db = require('./db');
 
 const authRoutes = require('./routes/auth');
 const conversationRoutes = require('./routes/conversations');
@@ -44,7 +45,8 @@ const globalLimiter = rateLimit({
 });
 app.use('/api', globalLimiter);
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  await db.prepare('SELECT 1 AS ok').get();
   res.json({ status: 'ok', service: 'Medora API', time: new Date().toISOString() });
 });
 
@@ -79,6 +81,17 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Medora API listening on port ${PORT}`);
-});
+async function start() {
+  try {
+    await db.initialize();
+    app.listen(PORT, () => {
+      console.log(`Medora API listening on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+    await db.close();
+    process.exitCode = 1;
+  }
+}
+
+start();

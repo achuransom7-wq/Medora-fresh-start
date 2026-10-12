@@ -153,6 +153,16 @@ CREATE TABLE IF NOT EXISTS research_reports (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS local_agent_feedback (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  conversation_id TEXT,
+  disease_name TEXT NOT NULL,
+  matched_symptoms TEXT,
+  outcome TEXT NOT NULL CHECK(outcome IN ('shown', 'confirmed', 'corrected')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_conversations_user ON conversations(user_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_project ON conversations(project_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
@@ -163,3 +173,4 @@ CREATE INDEX IF NOT EXISTS idx_attachments_conversation ON attachments(conversat
 CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id, active);
 CREATE INDEX IF NOT EXISTS idx_vitals_user ON vitals_logs(user_id, type, recorded_at);
 CREATE INDEX IF NOT EXISTS idx_research_user ON research_reports(user_id);
+CREATE INDEX IF NOT EXISTS idx_local_feedback_disease ON local_agent_feedback(disease_name, outcome);

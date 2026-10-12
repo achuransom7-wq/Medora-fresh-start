@@ -26,32 +26,16 @@ const MIN_MULTIPLIER = 0.6;
 const MAX_MULTIPLIER = 1.5;
 const STEP = 0.05;
 
-function ensureTable() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS local_agent_feedback (
-      id TEXT PRIMARY KEY,
-      user_id TEXT,
-      conversation_id TEXT,
-      disease_name TEXT NOT NULL,
-      matched_symptoms TEXT,
-      outcome TEXT NOT NULL CHECK(outcome IN ('shown', 'confirmed', 'corrected')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-    CREATE INDEX IF NOT EXISTS idx_local_feedback_disease ON local_agent_feedback(disease_name, outcome);
-  `);
-}
-ensureTable();
-
 /** Log that a candidate was shown to the patient (called automatically by localAI.js) */
-function logShown({ userId, conversationId, candidates }) {
+async function logShown({ userId, conversationId, candidates }) {
   try {
-    const insert = db.prepare(
-      `INSERT INTO local_agent_feedback (id, user_id, conversation_id, disease_name, matched_symptoms, outcome)
-       VALUES (?, ?, ?, ?, ?, 'shown')`
+    await db.batch(
+      candidates.map((candidate) => ({
+        sql: `INSERT INTO local_agent_feedback (id, user_id, conversation_id, disease_name, matched_symptoms, outcome)
+              VALUES (?, ?, ?, ?, ?, 'shown')`,
+        args: [randomUUID(), userId || null, conversationId || null, candidate.name, JSON.stringify(candidate.matchedSymptoms)],
+      }))
     );
-    for (const c of candidates) {
-      insert.run(randomUUID(), userId || null, conversationId || null, c.name, JSON.stringify(c.matchedSymptoms));
-    }
   } catch (err) {
     console.warn('[localLearning] failed to log shown candidates (non-fatal):', err.message);
   }
@@ -62,9 +46,9 @@ function logShown({ userId, conversationId, candidates }) {
  * or "no, that's not it" (corrected). Call this from a feedback endpoint/UI
  * button if you wire one up — entirely optional, the agent works fine without it.
  */
-function recordFeedback({ userId, conversationId, diseaseName, outcome }) {
+async function recordFeedback({ userId, conversationId, diseaseName, outcome }) {
   if (!['confirmed', 'corrected'].includes(outcome)) throw new Error('outcome must be confirmed or corrected');
-  db.prepare(
+  await db.prepare(
     `INSERT INTO local_agent_feedback (id, user_id, conversation_id, disease_name, matched_symptoms, outcome)
      VALUES (?, ?, ?, ?, NULL, ?)`
   ).run(randomUUID(), userId || null, conversationId || null, diseaseName, outcome);
@@ -79,8 +63,8 @@ let cache = null;
 let cacheAt = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-function buildMultiplierMap() {
-  const rows = db
+async function buildMultiplierMap() {
+  const rows = await db
     .prepare(
       `SELECT disease_name,
               SUM(CASE WHEN outcome = 'confirmed' THEN 1 ELSE 0 END) as confirmed,
@@ -100,17 +84,17 @@ function buildMultiplierMap() {
   return map;
 }
 
-function getLearningMultiplier(diseaseName) {
+async function getLearningMultipliers() {
   const now = Date.now();
   if (!cache || now - cacheAt > CACHE_TTL_MS) {
-    cache = buildMultiplierMap();
+    cache = await buildMultiplierMap();
     cacheAt = now;
   }
-  return cache.get(diseaseName) ?? 1;
+  return cache;
 }
 
 /** Basic transparency: see what the agent has "learned" so far, per disease */
-function getLearningStats() {
+async function getLearningStats() {
   return db
     .prepare(
       `SELECT disease_name,
@@ -124,4 +108,4 @@ function getLearningStats() {
     .all();
 }
 
-module.exports = { logShown, recordFeedback, getLearningMultiplier, getLearningStats };
+module.exports = { logShown, recordFeedback, getLearningMultipliers, getLearningStats };

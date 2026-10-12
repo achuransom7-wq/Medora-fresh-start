@@ -7,12 +7,12 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 router.use(authenticate);
 
-router.delete('/me', (req, res) => {
-  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(req.userId);
+router.delete('/me', async (req, res) => {
+  const user = await db.prepare('SELECT id FROM users WHERE id = ?').get(req.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const attachments = db.prepare('SELECT file_path FROM attachments WHERE user_id = ?').all(req.userId);
-  db.prepare('DELETE FROM users WHERE id = ?').run(req.userId);
+  const attachments = await db.prepare('SELECT file_path FROM attachments WHERE user_id = ?').all(req.userId);
+  await db.prepare('DELETE FROM users WHERE id = ?').run(req.userId);
   attachments.forEach(({ file_path }) => fs.unlink(file_path, () => {}));
   res.clearCookie('medora_refresh', { path: '/api/auth' });
   res.status(204).send();
@@ -25,31 +25,31 @@ router.post(
     body('healthDataConsent').custom((value) => value === true),
     body('cookieNoticeAccepted').custom((value) => value === true),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: 'All acknowledgements are required.' });
 
-    db.prepare(
+    await db.prepare(
       `UPDATE users SET terms_accepted_at = datetime('now'),
         health_data_consent_at = datetime('now'),
         cookie_notice_accepted_at = datetime('now'),
         consent_policy_version = ? WHERE id = ?`
     ).run('2026-10-11-v1', req.userId);
 
-    const consent = db.prepare(
+    const consent = await db.prepare(
       'SELECT terms_accepted_at, health_data_consent_at, cookie_notice_accepted_at FROM users WHERE id = ?'
     ).get(req.userId);
     res.json({ consent });
   }
 );
 
-router.get('/me', (req, res) => {
-  const user = db
+router.get('/me', async (req, res) => {
+  const user = await db
     .prepare('SELECT id, full_name, email, phone, date_of_birth, sex, city, region, created_at, terms_accepted_at, health_data_consent_at, cookie_notice_accepted_at FROM users WHERE id = ?')
     .get(req.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const healthProfile = db
+  const healthProfile = await db
     .prepare('SELECT * FROM user_health_profile WHERE user_id = ?')
     .get(req.userId);
 
@@ -66,7 +66,7 @@ router.patch(
     body('city').optional().trim().isLength({ max: 100 }).escape(),
     body('region').optional().trim().isLength({ max: 100 }).escape(),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
@@ -83,10 +83,10 @@ router.patch(
 
     if (fields.length > 0) {
       values.push(req.userId);
-      db.prepare(`UPDATE users SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
+      await db.prepare(`UPDATE users SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
     }
 
-    const user = db
+    const user = await db
       .prepare('SELECT id, full_name, email, phone, date_of_birth, sex, city, region FROM users WHERE id = ?')
       .get(req.userId);
     res.json({ user });
@@ -103,7 +103,7 @@ router.put(
     body('emergencyContactName').optional().trim().isLength({ max: 100 }).escape(),
     body('emergencyContactPhone').optional().trim().isLength({ max: 20 }),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
@@ -116,7 +116,7 @@ router.put(
       emergencyContactPhone,
     } = req.body;
 
-    db.prepare(
+    await db.prepare(
       `UPDATE user_health_profile SET
         allergies = COALESCE(?, allergies),
         chronic_conditions = COALESCE(?, chronic_conditions),
@@ -136,7 +136,7 @@ router.put(
       req.userId
     );
 
-    const healthProfile = db.prepare('SELECT * FROM user_health_profile WHERE user_id = ?').get(req.userId);
+    const healthProfile = await db.prepare('SELECT * FROM user_health_profile WHERE user_id = ?').get(req.userId);
     res.json({ healthProfile });
   }
 );
