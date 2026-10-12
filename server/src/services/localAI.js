@@ -39,6 +39,7 @@
  */
 
 const { checkRedFlags, escalate } = require('./triage');
+const fileStorage = require('./fileStorage');
 const { runDifferential } = require('./localDifferential');
 const { logShown, getLearningMultipliers } = require('./localLearning');
 const { classifyIntent, respondToIntent } = require('./localIntent');
@@ -70,22 +71,15 @@ const GENERIC_CLARIFYING_QUESTIONS = [
 ];
 
 /** Build a short, honest note about any image attachments (no local vision by default) */
-function describeAttachments(attachments) {
+async function describeAttachments(attachments) {
   if (!attachments?.length) return { note: '', base64Images: [] };
   const images = attachments.filter((a) => a.mime_type?.startsWith('image/'));
   if (!images.length) return { note: '', base64Images: [] };
 
   if (ollama.VISION_MODEL) {
-    const fs = require('fs');
-    const base64Images = images
-      .map((img) => {
-        try {
-          return fs.readFileSync(img.file_path).toString('base64');
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean);
+    const base64Images = await Promise.all(
+      images.map(async (image) => (await fileStorage.readFile(image.file_path)).toString('base64'))
+    );
     return { note: '', base64Images };
   }
 
@@ -195,7 +189,7 @@ async function getConsultationResponse(history, userMessage, opts = {}) {
   }
   const combinedText = [...priorSymptomTurns, userMessage].join('. ');
   const isFollowUp = priorSymptomTurns.length > 0;
-  const { note: attachmentNote, base64Images } = describeAttachments(attachments);
+  const { note: attachmentNote, base64Images } = await describeAttachments(attachments);
 
   const learningMultipliers = await getLearningMultipliers();
   const { candidates } = runDifferential(combinedText, {

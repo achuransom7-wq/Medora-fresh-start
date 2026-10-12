@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const multer = require('multer');
 const { randomUUID } = require('crypto');
@@ -11,6 +12,7 @@ const { getConsultationResponse, generateTitle, generateCareSummary } = require(
 const { matchDoctors, inferSpecialty } = require('../services/referral');
 const { SEVERITY_META } = require('../services/triage');
 const { extractAndStoreMemories, getActiveMemories } = require('../services/localMemory');
+const fileStorage = require('../services/fileStorage');
 const ensureWritableDirectory = require('../utils/ensureWritableDirectory');
 
 const router = express.Router();
@@ -26,13 +28,16 @@ const chatLimiter = rateLimit({
 
 // --- File upload setup (photos of rashes/injuries, lab results, prescriptions) ---
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../data/uploads');
-ensureWritableDirectory(UPLOAD_DIR, 'Upload storage');
+const STAGING_DIR = fileStorage.isRemoteStorageEnabled()
+  ? process.env.UPLOAD_TEMP_DIR || path.join(os.tmpdir(), 'medora-upload-staging')
+  : UPLOAD_DIR;
+ensureWritableDirectory(STAGING_DIR, 'Upload staging storage');
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']);
 
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    destination: (req, file, cb) => cb(null, STAGING_DIR),
     filename: (req, file, cb) => cb(null, `${randomUUID()}${path.extname(file.originalname).slice(0, 10)}`),
   }),
   limits: {
@@ -49,11 +54,24 @@ const upload = multer({
   },
 });
 
+async function cleanupStagedUploads(files) {
+  const results = await Promise.allSettled(
+    files.map((file) =>
+      fs.promises.unlink(file.path).catch((error) => {
+        if (error.code !== 'ENOENT') throw error;
+      })
+    )
+  );
+  for (const result of results) {
+    if (result.status === 'rejected') console.error('Upload staging cleanup failed:', result.reason);
+  }
+}
+
 function receiveUploads(req, res, next) {
-  upload.array('files', 3)(req, res, (error) => {
+  upload.array('files', 3)(req, res, async (error) => {
     if (!error) return next();
 
-    (req.files || []).forEach((file) => fs.unlink(file.path, () => {}));
+    await cleanupStagedUploads(req.files || []);
     const status = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
     return res.status(status).json({
       error: status === 413 ? 'Each attachment must be 10 MB or smaller.' : 'The attachment request is invalid or uses an unsupported file type.',
@@ -176,8 +194,8 @@ router.delete('/:id', param('id').isUUID(), async (req, res) => {
   if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
 
   const attachments = await db.prepare('SELECT file_path FROM attachments WHERE conversation_id = ?').all(conversation.id);
+  await fileStorage.deleteFiles(attachments.map(({ file_path }) => file_path));
   await db.prepare('DELETE FROM conversations WHERE id = ?').run(conversation.id);
-  attachments.forEach(({ file_path }) => fs.unlink(file_path, () => {}));
   res.status(204).send();
 });
 
@@ -213,14 +231,15 @@ router.post(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      // Clean up any uploaded files if validation failed
-      (req.files || []).forEach((f) => fs.unlink(f.path, () => {}));
+      await cleanupStagedUploads(req.files || []);
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
     const conversation = req.conversation;
 
     const { content } = req.body;
+    const storedReferences = [];
+    const persistedReferences = new Set();
 
     try {
       // Load prior messages for context (last 20 turns to keep it bounded)
@@ -248,11 +267,19 @@ router.post(
       for (const f of req.files || []) {
         const attId = randomUUID();
         const kind = f.mimetype.startsWith('image/') ? 'image' : 'document';
+        const fileReference = await fileStorage.storeUpload(
+          f.path,
+          `uploads/${attId}${path.extname(f.originalname).slice(0, 10)}`,
+          f.mimetype
+        );
+        storedReferences.push(fileReference);
+        if (fileStorage.isRemoteStorageEnabled()) await fs.promises.unlink(f.path);
         await db.prepare(
           `INSERT INTO attachments (id, message_id, conversation_id, user_id, kind, original_name, mime_type, file_path, size_bytes)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).run(attId, userMsgId, conversation.id, req.userId, kind, f.originalname, f.mimetype, f.path, f.size);
-        attachments.push({ id: attId, kind, original_name: f.originalname, mime_type: f.mimetype, file_path: f.path });
+        ).run(attId, userMsgId, conversation.id, req.userId, kind, f.originalname, f.mimetype, fileReference, f.size);
+        persistedReferences.add(fileReference);
+        attachments.push({ id: attId, kind, original_name: f.originalname, mime_type: f.mimetype, file_path: fileReference });
       }
 
       // Get AI response (vision-aware, memory-aware, style/language-aware)
@@ -323,13 +350,16 @@ router.post(
       });
     } catch (err) {
       console.error('Chat error:', err);
+      const orphanedReferences = storedReferences.filter((reference) => !persistedReferences.has(reference));
+      await fileStorage.deleteFiles(orphanedReferences);
+      await cleanupStagedUploads(req.files || []);
       res.status(500).json({ error: 'Something went wrong generating a response. Please try again.' });
     }
   }
 );
 
 // Stream/serve an attachment file (owner-only)
-router.get('/attachments/:attachmentId/file', param('attachmentId').isUUID(), async (req, res) => {
+router.get('/attachments/:attachmentId/file', param('attachmentId').isUUID(), async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid attachment id' });
 
@@ -337,13 +367,20 @@ router.get('/attachments/:attachmentId/file', param('attachmentId').isUUID(), as
     .prepare('SELECT * FROM attachments WHERE id = ? AND user_id = ?')
     .get(req.params.attachmentId, req.userId);
   if (!att) return res.status(404).json({ error: 'Attachment not found' });
-  if (!fs.existsSync(att.file_path)) return res.status(404).json({ error: 'File no longer available' });
 
   res.setHeader('Content-Type', att.mime_type);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Cache-Control', 'private, no-store');
   res.setHeader('Content-Disposition', att.kind === 'image' ? 'inline; filename="medora-image"' : 'attachment; filename="medora-document"');
-  fs.createReadStream(att.file_path).pipe(res);
+  try {
+    const file = await fileStorage.readFile(att.file_path);
+    res.send(file);
+  } catch (error) {
+    if (error.code === 'NoSuchKey' || error.code === 'ENOENT') {
+      return res.status(404).json({ error: 'File no longer available' });
+    }
+    next(error);
+  }
 });
 
 // Generate a downloadable consultation summary document (Medora's Artifact equivalent)
@@ -411,10 +448,11 @@ router.patch(
 
 // Delete a conversation
 router.delete('/:id', param('id').isUUID(), async (req, res) => {
-  const result = await db.prepare('DELETE FROM conversations WHERE id = ? AND user_id = ?').run(
-    req.params.id,
-    req.userId
-  );
+  const attachments = await db
+    .prepare('SELECT file_path FROM attachments WHERE conversation_id = ? AND user_id = ?')
+    .all(req.params.id, req.userId);
+  await fileStorage.deleteFiles(attachments.map(({ file_path }) => file_path));
+  const result = await db.prepare('DELETE FROM conversations WHERE id = ? AND user_id = ?').run(req.params.id, req.userId);
   if (result.changes === 0) return res.status(404).json({ error: 'Conversation not found' });
   res.json({ success: true });
 });

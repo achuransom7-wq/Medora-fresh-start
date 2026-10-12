@@ -3,13 +3,18 @@
   "version": "1.0.0",
   "description": "Medora AI Health Assistant - Backend API",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/db/seed.js",
-    "migrate:turso": "node src/db/migrateToTurso.js"
+    "migrate:turso": "node src/db/migrateToTurso.js",
+    "migrate:uploads:r2": "node src/db/migrateUploadsToR2.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1149.0",
     "@libsql/client": "^0.18.0",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",

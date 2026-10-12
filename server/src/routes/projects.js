@@ -1,10 +1,10 @@
 const express = require('express');
-const fs = require('fs');
 const { randomUUID } = require('crypto');
 const { body, param, validationResult } = require('express-validator');
 const db = require('../db');
 const { authenticate } = require('../middleware/auth');
 const { generateCareSummary } = require('../services/localAI');
+const fileStorage = require('../services/fileStorage');
 
 const router = express.Router();
 router.use(authenticate);
@@ -119,11 +119,11 @@ router.delete('/:id', param('id').isUUID(), async (req, res) => {
   const attachments = await db
     .prepare('SELECT file_path FROM attachments WHERE conversation_id IN (SELECT id FROM conversations WHERE project_id = ?)')
     .all(project.id);
+  await fileStorage.deleteFiles(attachments.map(({ file_path }) => file_path));
   await db.batch([
     { sql: 'DELETE FROM conversations WHERE project_id = ? AND user_id = ?', args: [project.id, req.userId] },
     { sql: 'DELETE FROM projects WHERE id = ? AND user_id = ?', args: [project.id, req.userId] },
   ]);
-  attachments.forEach(({ file_path }) => fs.unlink(file_path, () => {}));
   res.json({ success: true });
 });
 

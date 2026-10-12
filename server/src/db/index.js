@@ -7,6 +7,13 @@ const ensureWritableDirectory = require('../utils/ensureWritableDirectory');
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/medora.db');
 const databaseUrl = process.env.TURSO_DATABASE_URL || pathToFileURL(path.resolve(DB_PATH)).href;
 
+if (process.env.NODE_ENV === 'production' && !process.env.TURSO_DATABASE_URL) {
+  throw new Error('Configure TURSO_DATABASE_URL before starting Medora in production.');
+}
+if (process.env.NODE_ENV === 'production' && databaseUrl.startsWith('file:')) {
+  throw new Error('Production deployments must use a remote Turso database, not a local SQLite file.');
+}
+
 if (!process.env.TURSO_DATABASE_URL) {
   ensureWritableDirectory(path.dirname(DB_PATH), 'Database');
 }

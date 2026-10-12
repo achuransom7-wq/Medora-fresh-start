@@ -1,8 +1,8 @@
 const express = require('express');
-const fs = require('fs');
 const { body, validationResult } = require('express-validator');
 const db = require('../db');
 const { authenticate } = require('../middleware/auth');
+const fileStorage = require('../services/fileStorage');
 
 const router = express.Router();
 router.use(authenticate);
@@ -12,8 +12,8 @@ router.delete('/me', async (req, res) => {
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   const attachments = await db.prepare('SELECT file_path FROM attachments WHERE user_id = ?').all(req.userId);
+  await fileStorage.deleteFiles(attachments.map(({ file_path }) => file_path));
   await db.prepare('DELETE FROM users WHERE id = ?').run(req.userId);
-  attachments.forEach(({ file_path }) => fs.unlink(file_path, () => {}));
   res.clearCookie('medora_refresh', { path: '/api/auth' });
   res.status(204).send();
 });
