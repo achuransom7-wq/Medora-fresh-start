@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Menu, ShieldAlert, FileDown, Volume2, VolumeX } from 'lucide-react';
-import { jsPDF } from 'jspdf';
 import client from '../api/client';
 import Sidebar from '../components/Sidebar';
 import ChatMessage from '../components/ChatMessage';
@@ -9,8 +8,13 @@ import ChatInput from '../components/ChatInput';
 import TypingIndicator from '../components/TypingIndicator';
 import ReferralCard from '../components/ReferralCard';
 import ResearchPanel from '../components/ResearchPanel';
+import { useToast } from '../context/toastContext';
+import usePageMeta from '../hooks/usePageMeta';
+import { getErrorMessage } from '../utils/apiError';
 
-function downloadSummaryPdf(summary, fileName) {
+async function downloadSummaryPdf(summary, fileName) {
+  // jsPDF is large, so it is only downloaded when someone actually exports a summary.
+  const { jsPDF } = await import('jspdf');
   const document = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = document.internal.pageSize.getWidth();
   const pageHeight = document.internal.pageSize.getHeight();
@@ -63,6 +67,8 @@ function downloadSummaryPdf(summary, fileName) {
 }
 
 export default function ChatPage() {
+  usePageMeta({ title: 'Chat', noindex: true });
+  const toast = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -81,8 +87,12 @@ export default function ChatPage() {
   const messageRefs = useRef({});
 
   const loadConversations = useCallback(async () => {
-    const { data } = await client.get('/conversations');
-    setConversations(data.conversations);
+    try {
+      const { data } = await client.get('/conversations');
+      setConversations(data.conversations);
+    } catch {
+      // The sidebar list simply stays as it was; the chat itself still works.
+    }
   }, []);
 
   useEffect(() => {
@@ -101,9 +111,12 @@ export default function ChatPage() {
     client
       .get(`/conversations/${id}`)
       .then(({ data }) => setMessages(data.messages))
-      .catch(() => navigate('/'))
+      .catch((err) => {
+        toast.error(getErrorMessage(err, "We couldn't open that conversation."));
+        navigate('/');
+      })
       .finally(() => setLoadingConversation(false));
-  }, [id, navigate]);
+  }, [id, navigate, toast]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -133,9 +146,13 @@ export default function ChatPage() {
   };
 
   const handleNewChat = async () => {
-    const { data } = await client.post('/conversations');
-    setConversations((prev) => [data.conversation, ...prev]);
-    navigate(`/chat/${data.conversation.id}`);
+    try {
+      const { data } = await client.post('/conversations');
+      setConversations((prev) => [data.conversation, ...prev]);
+      navigate(`/chat/${data.conversation.id}`);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "We couldn't start a new chat."));
+    }
   };
 
   const updateConversation = (conversation) => {
@@ -150,10 +167,15 @@ export default function ChatPage() {
     let conversationId = id;
 
     if (!conversationId) {
-      const { data } = await client.post('/conversations');
-      conversationId = data.conversation.id;
-      setConversations((prev) => [data.conversation, ...prev]);
-      navigate(`/chat/${conversationId}`, { replace: true });
+      try {
+        const { data } = await client.post('/conversations');
+        conversationId = data.conversation.id;
+        setConversations((prev) => [data.conversation, ...prev]);
+        navigate(`/chat/${conversationId}`, { replace: true });
+      } catch (err) {
+        toast.error(getErrorMessage(err, "We couldn't start the conversation."));
+        return;
+      }
     }
 
     const optimisticUserMsg = {
@@ -188,7 +210,7 @@ export default function ChatPage() {
         {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: err.response?.data?.error || 'Something went wrong. Please try again.',
+          content: getErrorMessage(err),
           severity: null,
         },
       ]);
@@ -210,7 +232,7 @@ export default function ChatPage() {
       });
       navigate('/referrals');
     } catch (err) {
-      // silent fail is acceptable here with a fallback alert-free UX; could add toast
+      toast.error(getErrorMessage(err, "We couldn't save that referral request."));
     } finally {
       setBookingId(null);
     }
@@ -218,7 +240,12 @@ export default function ChatPage() {
 
   const handleAgentFeedback = async (diseaseName, outcome) => {
     if (!id) return;
-    await client.post('/local-agent/feedback', { conversationId: id, diseaseName, outcome });
+    try {
+      await client.post('/local-agent/feedback', { conversationId: id, diseaseName, outcome });
+      toast.success('Thanks, your feedback was saved.');
+    } catch (err) {
+      toast.error(getErrorMessage(err, "We couldn't save your feedback."));
+    }
   };
 
   const handleExportSummary = async () => {
@@ -226,18 +253,22 @@ export default function ChatPage() {
     setSummaryLoading(true);
     try {
       const { data } = await client.get(`/conversations/${id}/summary`);
-      downloadSummaryPdf(data.summary, `medora-consultation-summary-${id.slice(0, 8)}`);
+      await downloadSummaryPdf(data.summary, `medora-consultation-summary-${id.slice(0, 8)}`);
     } catch (err) {
-      // no-op — could surface a toast
+      toast.error(getErrorMessage(err, "We couldn't create the summary."));
     } finally {
       setSummaryLoading(false);
     }
   };
 
   const handleDownloadThreadSummary = async (project) => {
-    const { data } = await client.get(`/projects/${project.id}/summary`);
-    const safeTitle = project.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
-    downloadSummaryPdf(data.summary, `medora-consultation-thread-${safeTitle || project.id.slice(0, 8)}`);
+    try {
+      const { data } = await client.get(`/projects/${project.id}/summary`);
+      const safeTitle = project.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+      await downloadSummaryPdf(data.summary, `medora-consultation-thread-${safeTitle || project.id.slice(0, 8)}`);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "We couldn't create the thread summary."));
+    }
   };
 
   const isUrgent = messages[messages.length - 1]?.severity === 'urgent';
@@ -249,7 +280,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-full bg-cloud">
+    <div className="flex h-dvh bg-cloud">
       <Sidebar
         conversations={conversations}
         onNewChat={handleNewChat}
@@ -302,7 +333,7 @@ export default function ChatPage() {
         )}
 
         {/* Message area */}
-        <div ref={scrollRef} className="relative flex-1 overflow-y-auto">
+        <div id="main" role="main" ref={scrollRef} className="relative flex-1 overflow-y-auto">
           {!id && messages.length === 0 ? (
             <EmptyState onSend={handleSend} />
           ) : (

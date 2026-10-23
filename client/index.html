@@ -2,14 +2,63 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Medora — calm, clear AI health guidance and doctor referrals." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Medora An AI Health Assistant for Cameroon</title>
+    <meta name="description" content="Medora is a free AI health assistant for Cameroon. Describe your symptoms in English, French or Pidgin, get clear next steps and urgent-risk triage." />
+    <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#0F5E56" />
-    <title>Medora — AI Health Assistant</title>
+    <link rel="canonical" href="https://medora-4883.onrender.com/" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Medora" />
+    <meta property="og:title" content="Medora | Free AI Health Assistant for Cameroon" />
+    <meta property="og:description" content="Describe your symptoms, understand how urgent they are, and keep your health notes in one place." />
+    <meta property="og:url" content="https://medora-4883.onrender.com/" />
+    <meta property="og:image" content="https://medora-4883.onrender.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://medora-4883.onrender.com/og-image.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "name": "Medora",
+            "url": "https://medora-4883.onrender.com/",
+            "applicationCategory": "HealthApplication",
+            "operatingSystem": "Any",
+            "inLanguage": ["en", "fr"],
+            "description": "Free AI health assistant for Cameroon with symptom guidance and urgent-risk triage.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "XAF" }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              { "@type": "Question", "name": "Is Medora free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Medora is a free health assistant. There are no payments or subscriptions." } },
+              { "@type": "Question", "name": "Does Medora diagnose conditions?", "acceptedAnswer": { "@type": "Answer", "text": "No. Medora gives general health guidance and helps you decide how urgently to seek care. It is not a doctor and does not replace one." } },
+              { "@type": "Question", "name": "Which languages does Medora support?", "acceptedAnswer": { "@type": "Answer", "text": "English, French and Cameroonian Pidgin." } }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main style="font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem">
+        <h1>Medora: free AI health assistant for Cameroon</h1>
+        <p>Describe your symptoms in English, French or Pidgin and get clear next steps with urgent-risk triage. Medora gives general guidance and is not a substitute for a doctor. In an emergency, go to the nearest hospital.</p>
+        <p>Please enable JavaScript to use Medora.</p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

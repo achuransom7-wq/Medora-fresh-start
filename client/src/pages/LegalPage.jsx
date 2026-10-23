@@ -116,7 +116,7 @@ export default function LegalPage() {
   if (!policy) return <Navigate to="/legal/privacy" replace />;
 
   return (
-    <main className="min-h-screen bg-cloud px-4 py-8 sm:px-6">
+    <main className="min-h-dvh bg-cloud px-4 py-8 sm:px-6">
       <article className="mx-auto max-w-3xl rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-10">
         <Link to="/login" className="text-sm font-medium text-teal-deep underline underline-offset-4">
           Back to Medora

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export default function AuthLayout({ title, subtitle, children }) {
   return (
-    <div className="min-h-screen flex bg-cloud">
+    <div className="min-h-dvh flex bg-cloud">
       {/* Left visual panel - health-forward first impression */}
       <div className="hidden lg:flex lg:w-1/2 bg-teal-deep relative overflow-hidden flex-col justify-between p-12">
         <div className="absolute inset-0 opacity-[0.07]" style={{

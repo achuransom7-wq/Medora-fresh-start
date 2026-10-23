@@ -23,7 +23,7 @@
 const { DISEASES } = require('../data/diseases');
 const { GENERAL_TOPICS } = require('../data/healthTopics');
 const { normalize } = require('./localDifferential');
-const ollama = require('./ollamaClient');
+const llm = require('./llm'); // provider router: free LLM -> Ollama -> built-in engine
 const { PUNCTUATION_RULE } = require('./promptStyle');
 
 const DOCTOR_REFERRAL_LINE =
@@ -115,20 +115,20 @@ async function answerKnowledgeQuestion(question, opts = {}) {
   if (disease) baseAnswer = buildDiseaseAnswer(disease, question);
   else if (topic) baseAnswer = `${topic.content}\n\n${DOCTOR_REFERRAL_LINE}`;
 
-  if (ollama.isEnabled() && (disease || topic)) {
+  if (llm.isEnabled() && (disease || topic)) {
     const grounding = disease
       ? `Reference facts about ${disease.name} (do not contradict or go beyond these): ${disease.description} Symptoms: ${disease.symptomsHuman.join(', ')}. General precautions: ${disease.precautions.join('; ')}.`
       : `Reference facts on this topic (do not contradict or go beyond these): ${topic.content}`;
     const systemPrompt = `You are Medora, a warm, knowledgeable medical assistant having a normal conversation. Answer the patient's question conversationally and clearly, grounded ONLY in the reference facts given; do not add facts beyond them, and do not invent statistics or sources. Never name a specific prescription drug or dosage; always say to see a doctor for actual treatment/diagnosis. Keep it to 3-6 sentences.\n\n${PUNCTUATION_RULE}\n\n${grounding}`;
-    const reply = await ollama.chat(systemPrompt, [{ role: 'user', content: question }]);
+    const reply = await llm.chat(systemPrompt, [{ role: 'user', content: question }]);
     if (reply) return reply;
   }
 
   if (baseAnswer) return baseAnswer;
 
-  if (ollama.isEnabled()) {
+  if (llm.isEnabled()) {
     const systemPrompt = `You are Medora, a warm, knowledgeable medical assistant. The patient asked a general medical/health question you don't have specific reference data for. Answer it as best and as safely as you can using well-established general medical knowledge, staying conservative and clearly noting uncertainty where relevant. Never name a specific prescription drug or dosage; always recommend seeing a doctor or pharmacist for that. Keep it to 3-5 sentences. If this is not a medical/health topic at all, say plainly that it's outside what you can help with.\n\n${PUNCTUATION_RULE}`;
-    const reply = await ollama.chat(systemPrompt, [{ role: 'user', content: question }]);
+    const reply = await llm.chat(systemPrompt, [{ role: 'user', content: question }]);
     if (reply) return reply;
   }
 

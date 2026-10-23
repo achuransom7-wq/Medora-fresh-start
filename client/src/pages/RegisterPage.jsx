@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
+import usePageMeta from '../hooks/usePageMeta';
+import { getErrorMessage } from '../utils/apiError';
 import AuthLayout from '../components/AuthLayout';
 
 export default function RegisterPage() {
+  usePageMeta({ title: 'Create your free account', description: 'Create a free Medora account for symptom guidance, urgent-risk triage and a personal health profile.' });
   const { register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -29,7 +32,7 @@ export default function RegisterPage() {
       await register(form);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Unable to create account. Please try again.');
+      setError(getErrorMessage(err, 'Unable to create account. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -47,7 +50,7 @@ export default function RegisterPage() {
             autoComplete="name"
             value={form.fullName}
             onChange={update('fullName')}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-cloud focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-mid text-[15px]"
+            className="field-input"
             placeholder="Achu Ransom"
           />
         </div>
@@ -60,7 +63,7 @@ export default function RegisterPage() {
             autoComplete="email"
             value={form.email}
             onChange={update('email')}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-cloud focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-mid text-[15px]"
+            className="field-input"
             placeholder="you@example.com"
           />
         </div>
@@ -76,7 +79,7 @@ export default function RegisterPage() {
               autoComplete="new-password"
               value={form.password}
               onChange={update('password')}
-              className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-line bg-cloud focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-mid text-[15px]"
+              className="field-input pr-11"
               placeholder="At least 8 characters"
             />
             <button

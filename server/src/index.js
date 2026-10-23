@@ -3,6 +3,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
@@ -26,6 +27,7 @@ const PORT = process.env.PORT || 4000;
 // Trust proxy (needed on Render/behind reverse proxies for correct rate limiting/IP)
 app.set('trust proxy', 1);
 
+app.use(compression());
 app.use(helmet());
 app.use(
   cors({
@@ -45,9 +47,18 @@ const globalLimiter = rateLimit({
 });
 app.use('/api', globalLimiter);
 
+// Liveness: no DB call, so uptime monitors and Render health checks stay cheap and fast.
+app.get('/healthz', (req, res) => res.status(200).send('ok'));
+
+// Readiness: confirms the database is reachable and reports 503 (not a crash) when it is not.
 app.get('/api/health', async (req, res) => {
-  await db.prepare('SELECT 1 AS ok').get();
-  res.json({ status: 'ok', service: 'Medora API', time: new Date().toISOString() });
+  try {
+    await db.prepare('SELECT 1 AS ok').get();
+    res.json({ status: 'ok', service: 'Medora API', time: new Date().toISOString() });
+  } catch (error) {
+    console.error('Health check failed:', error.message);
+    res.status(503).json({ status: 'degraded', service: 'Medora API' });
+  }
 });
 
 app.use('/api/auth', authRoutes);
@@ -68,8 +79,27 @@ app.use('/api', (req, res) => {
 });
 
 const clientDist = path.resolve(__dirname, '../../client/dist');
-app.use(express.static(clientDist));
+// Hashed build assets can be cached for a year; HTML must always be revalidated.
+app.use(
+  express.static(clientDist, {
+    index: false,
+    setHeaders(res, filePath) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    },
+  })
+);
+
+// Only real app routes get a 200; anything else returns 404 (with the app shell so the client can show its Not Found page).
+const APP_ROUTES = /^\/(?:|login|register|consent|profile|referrals|chat\/[\w-]+|legal\/[\w-]+)\/?$/;
 app.get(/.*/, (req, res, next) => {
+  res.status(APP_ROUTES.test(req.path) ? 200 : 404);
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(clientDist, 'index.html'), (err) => {
     if (err) next(err);
   });
@@ -84,14 +114,32 @@ app.use((err, req, res, next) => {
 async function start() {
   try {
     await db.initialize();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Medora API listening on port ${PORT}`);
     });
+    // Keep-alive slightly above typical proxy timeouts avoids sporadic 502s behind Render's load balancer.
+    server.keepAliveTimeout = 65 * 1000;
+    server.headersTimeout = 66 * 1000;
+
+    const shutdown = (signal) => {
+      console.log(`${signal} received, shutting down gracefully`);
+      server.close(async () => {
+        await db.close();
+        process.exit(0);
+      });
+      setTimeout(() => process.exit(1), 10000).unref();
+    };
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (error) {
     console.error('Database initialization failed:', error);
     await db.close();
     process.exitCode = 1;
   }
 }
+
+// Log and keep serving instead of letting one stray rejection take the whole app down.
+process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:', reason));
+process.on('uncaughtException', (error) => console.error('Uncaught exception:', error));
 
 start();

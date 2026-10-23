@@ -16,7 +16,7 @@
  * recommends checking current information with a qualified clinician or reputable public-health source.
  */
 
-const ollama = require('./ollamaClient');
+const llm = require('./llm'); // provider router: free LLM -> Ollama -> built-in engine
 const { PUNCTUATION_RULE } = require('./promptStyle');
 const { normalize } = require('./localDifferential');
 const { DISEASES } = require('../data/diseases');
@@ -69,9 +69,9 @@ async function researchHealthTopic(query, { conversationContext } = {}) {
 
   let content = snippet.content;
 
-  if (ollama.isEnabled()) {
+  if (llm.isEnabled()) {
     const systemPrompt = `You help explain health topics in plain language for a patient. You are given a reference note; rephrase it clearly and warmly for the patient's specific question, but do NOT add any facts beyond what's in the reference note, and do NOT invent sources or statistics. Keep it to 3-5 short sentences plus one line on when to see a doctor. Never name specific prescription drugs or dosages.\n\n${PUNCTUATION_RULE}\n\nReference note: ${snippet.content}`;
-    const reply = await ollama.chat(systemPrompt, [{ role: 'user', content: query }]);
+    const reply = await llm.chat(systemPrompt, [{ role: 'user', content: query }]);
     if (reply) content = reply;
   }
 

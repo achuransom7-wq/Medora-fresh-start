@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Phone, MapPin, ArrowLeft } from 'lucide-react';
+import { Menu, Phone, ArrowLeft } from 'lucide-react';
 import client from '../api/client';
 import Sidebar from '../components/Sidebar';
-import { severityStyle } from '../components/SeverityBadge';
+import { severityStyle } from '../components/severityStyle';
 
 const STATUS_LABELS = {
   pending: 'Saved in Medora',
@@ -49,7 +49,7 @@ export default function ReferralsPage() {
   };
 
   return (
-    <div className="flex h-full bg-cloud">
+    <div className="flex h-dvh bg-cloud">
       <Sidebar
         conversations={conversations}
         onNewChat={handleNewChat}

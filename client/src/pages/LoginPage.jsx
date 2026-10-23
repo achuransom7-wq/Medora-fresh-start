@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import AuthLayout from '../components/AuthLayout';
+import usePageMeta from '../hooks/usePageMeta';
+import { getErrorMessage } from '../utils/apiError';
 
 export default function LoginPage() {
+  usePageMeta({ title: 'Sign in', description: 'Sign in to Medora to continue your health guidance.' });
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -21,7 +24,7 @@ export default function LoginPage() {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Unable to log in. Please try again.');
+      setError(getErrorMessage(err, 'Unable to log in. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -45,7 +48,7 @@ export default function LoginPage() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-cloud focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-mid text-[15px]"
+            className="field-input"
             placeholder="you@example.com"
           />
         </div>
@@ -59,7 +62,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3.5 py-2.5 pr-11 rounded-xl border border-line bg-cloud focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-mid text-[15px]"
+              className="field-input pr-11"
               placeholder="••••••••"
             />
             <button

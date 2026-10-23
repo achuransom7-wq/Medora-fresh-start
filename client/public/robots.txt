@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /legal/
+Disallow: /api/
+Disallow: /profile
+Disallow: /referrals
+Disallow: /chat/
+Disallow: /consent
+
+Sitemap: https://medora-4883.onrender.com/sitemap.xml

@@ -16,10 +16,10 @@
   --color-orange-ink: #793500;
   --color-ink: #1A2E2B;
   --color-ink-soft: #4A5C58;
-  --color-cloud: #F7FAF9;
+  --color-cloud: #F4F8F7;
   --color-line: #DCEAE6;
 
-  --font-display: Georgia, 'Times New Roman', serif;
+  --font-display: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
@@ -28,21 +28,35 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
 html, body, #root {
-  height: 100%;
+  min-height: 100%;
+}
+
+#root {
+  min-height: 100dvh;
 }
 
 body {
   margin: 0;
+  overflow-wrap: anywhere;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   font-family: var(--font-body);
   background: var(--color-cloud);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
 
-:focus-visible {
-  outline: 3px solid #167A6F;
-  outline-offset: 2px;
+@layer base {
+  :focus-visible {
+    outline: 3px solid #167A6F;
+    outline-offset: 2px;
+  }
 }
 
 ::selection {
@@ -99,3 +113,87 @@ body {
 .typing-dot {
   animation: typing-dot 1.2s infinite ease-in-out;
 }
+
+
+/* ---------- Shared building blocks (keeps every page consistent) ---------- */
+.font-display { letter-spacing: -0.015em; }
+
+.card {
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgb(15 94 86 / 0.04), 0 8px 24px -12px rgb(15 94 86 / 0.10);
+}
+@media (min-width: 640px) {
+  .card { padding: 1.5rem; }
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-ink-soft);
+}
+
+.field-input {
+  width: 100%;
+  min-height: 2.75rem; /* comfortable tap target on phones */
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-cloud);
+  font-size: 1rem; /* 16px stops iOS from zooming on focus */
+  color: var(--color-ink);
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+.field-input:hover { border-color: #b9d4cd; }
+.field-input:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--color-teal-mid);
+  box-shadow: 0 0 0 3px rgb(22 122 111 / 0.18);
+}
+.field-input[aria-invalid="true"] { border-color: var(--color-coral-ink); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, transform 0.05s, opacity 0.15s;
+}
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-primary { background: var(--color-teal-deep); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--color-teal-mid); }
+.btn-secondary { background: #fff; color: var(--color-ink); border: 1px solid var(--color-line); }
+.btn-secondary:hover:not(:disabled) { background: var(--color-cloud); }
+.btn-danger { background: #fff; color: var(--color-coral-ink); border: 1px solid var(--color-coral-ink); }
+.btn-danger:hover:not(:disabled) { background: var(--color-coral-ink); color: #fff; }
+
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--color-teal-deep);
+  color: #fff;
+  transition: top 0.15s;
+}
+.skip-link:focus { top: 0.75rem; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-toast-in { animation: toast-in 0.2s ease-out; }

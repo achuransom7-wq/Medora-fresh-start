@@ -16,7 +16,7 @@
 
 const { randomUUID } = require('crypto');
 const db = require('../db');
-const ollama = require('./ollamaClient');
+const llm = require('./llm'); // provider router: free LLM -> Ollama -> built-in engine
 
 const PATTERNS = [
   { category: 'allergy', regex: /(?:i'?m|i am)?\s*allergic to ([a-z0-9 ,'-]{2,60}?)(?:\.|,|;|$)/i },
@@ -49,10 +49,10 @@ function extractWithPatterns(text) {
 }
 
 /** Optional second pass via a local LLM, if enabled — same JSON-array contract as the rule-based pass */
-async function extractWithOllama(userMessage, assistantMessage) {
-  if (!ollama.isEnabled()) return [];
+async function extractWithLlm(userMessage, assistantMessage) {
+  if (!llm.isEnabled()) return [];
   const systemPrompt = `Extract durable, reusable facts about this patient worth remembering for FUTURE visits (allergies, chronic conditions, ongoing medications, recurring symptom patterns, or clear communication preferences). Do NOT include one-off symptoms from a single mild illness. Respond with ONLY a JSON array, no prose: [{"category": "allergy"|"condition"|"medication"|"pattern"|"preference"|"other", "content": "short factual sentence"}]. If nothing is worth remembering, respond with [].`;
-  const reply = await ollama.chat(systemPrompt, [
+  const reply = await llm.chat(systemPrompt, [
     { role: 'user', content: `Patient said: ${userMessage}\n\nMedora replied: ${assistantMessage}` },
   ]);
   if (!reply) return [];
@@ -72,8 +72,8 @@ async function extractWithOllama(userMessage, assistantMessage) {
 async function extractAndStoreMemories({ userId, conversationId, userMessage, assistantMessage }) {
   try {
     const patternFacts = extractWithPatterns(userMessage);
-    const ollamaFacts = await extractWithOllama(userMessage, assistantMessage);
-    const facts = [...patternFacts, ...ollamaFacts];
+    const llmFacts = await extractWithLlm(userMessage, assistantMessage);
+    const facts = [...patternFacts, ...llmFacts];
     if (!facts.length) return;
 
     const existing = (await db

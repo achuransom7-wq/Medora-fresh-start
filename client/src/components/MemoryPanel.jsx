@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Brain, X, Plus } from 'lucide-react';
 import client from '../api/client';
+import { useToast } from '../context/toastContext';
+import { getErrorMessage } from '../utils/apiError';
 
 const CATEGORY_LABEL = {
   allergy: 'Allergy',
@@ -21,26 +23,36 @@ const CATEGORY_COLOR = {
 };
 
 export default function MemoryPanel() {
+  const toast = useToast();
+  const [loadError, setLoadError] = useState(false);
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [newContent, setNewContent] = useState('');
   const [newCategory, setNewCategory] = useState('other');
 
-  const load = () => {
+  const load = useCallback(() => {
     client
       .get('/memories')
-      .then(({ data }) => setMemories(data.memories))
+      .then(({ data }) => {
+        setMemories(data.memories);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(load, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   const forget = async (id) => {
     setMemories((prev) => prev.filter((m) => m.id !== id));
     try {
       await client.delete(`/memories/${id}`);
-    } catch {
+    } catch (err) {
+      toast.error(getErrorMessage(err, "We couldn't remove that memory."));
       load(); // resync on failure
     }
   };
@@ -54,18 +66,18 @@ export default function MemoryPanel() {
       setMemories((prev) => [data.memory, ...prev]);
       setNewContent('');
       setAdding(false);
-    } catch {
-      // non-fatal
+    } catch (err) {
+      toast.error(getErrorMessage(err, "We couldn't save that memory."));
     }
   };
 
   return (
-    <section className="bg-white border border-line rounded-2xl p-5">
+    <section className="card">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-ink text-sm flex items-center gap-2">
           <Brain size={15} className="text-teal-deep" /> What Medora remembers
         </h2>
-        <button onClick={() => setAdding((v) => !v)} className="text-teal-mid hover:text-teal-deep p-1" aria-label="Add memory">
+        <button type="button" onClick={() => setAdding((v) => !v)} aria-expanded={adding} className="-mr-2 rounded-lg p-2.5 text-teal-mid hover:bg-cloud hover:text-teal-deep" aria-label="Add memory">
           <Plus size={16} />
         </button>
       </div>
@@ -81,7 +93,7 @@ export default function MemoryPanel() {
             id="memory-category"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            className="text-sm border border-line rounded-lg px-2 py-2 bg-cloud"
+            className="field-input sm:w-40"
           >
             {Object.entries(CATEGORY_LABEL).map(([k, v]) => (
               <option key={k} value={k}>
@@ -95,15 +107,20 @@ export default function MemoryPanel() {
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
             placeholder="e.g. Allergic to penicillin"
-            className="flex-1 text-sm border border-line rounded-lg px-3 py-2 outline-none focus:border-teal-mid"
+            className="field-input flex-1" maxLength={500}
           />
-          <button type="submit" className="text-sm font-medium text-white bg-teal-deep rounded-lg px-3 py-2 hover:bg-teal-mid">
+          <button type="submit" className="btn btn-primary">
             Add
           </button>
         </form>
       )}
 
-      {loading ? (
+      {loadError ? (
+        <p className="text-sm text-coral-ink" role="alert">
+          We couldn't load your memories.{' '}
+          <button type="button" onClick={load} className="underline">Try again</button>
+        </p>
+      ) : loading ? (
         <p className="text-sm text-ink-soft">Loading…</p>
       ) : memories.length === 0 ? (
         <p className="text-sm text-ink-soft">Nothing yet — this fills in as you talk with Medora.</p>
@@ -115,7 +132,7 @@ export default function MemoryPanel() {
                 {CATEGORY_LABEL[m.category]}
               </span>
               <p className="flex-1 text-sm text-ink">{m.content}</p>
-              <button onClick={() => forget(m.id)} aria-label="Forget this memory" className="text-ink-soft hover:text-coral-ink flex-shrink-0">
+              <button type="button" onClick={() => forget(m.id)} aria-label={`Forget: ${m.content}`} className="-m-1.5 shrink-0 rounded-lg p-2 text-ink-soft hover:text-coral-ink">
                 <X size={14} />
               </button>
             </div>

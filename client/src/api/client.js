@@ -5,7 +5,15 @@ const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' 
 const client = axios.create({
   baseURL: API_BASE,
   withCredentials: true, // send/receive the httpOnly refresh cookie
+  timeout: 30000,
 });
+
+const RETRY_DELAYS_MS = [1000, 2500, 5000];
+const isTransient = (error) =>
+  !error.response || [502, 503, 504].includes(error.response.status);
+const canRetry = (config) =>
+  config && (config.method === 'get' || config.url?.endsWith('/auth/refresh'));
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let accessToken = null;
 let onUnauthorized = null;
@@ -31,6 +39,16 @@ client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
+
+    // A sleeping or restarting server returns 502/503/504 or drops the connection. Retry safe requests quietly.
+    if (original && isTransient(error) && canRetry(original)) {
+      original._attempt = (original._attempt || 0) + 1;
+      if (original._attempt <= RETRY_DELAYS_MS.length) {
+        await wait(RETRY_DELAYS_MS[original._attempt - 1]);
+        return client(original);
+      }
+    }
+
     if (error.response?.status === 401 && !original._retry && !original.url.includes('/auth/')) {
       original._retry = true;
       try {

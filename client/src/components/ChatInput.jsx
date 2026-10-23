@@ -98,7 +98,7 @@ export default function ChatInput({ onSend, disabled }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} aria-label="Send a health message" className="p-3 bg-white border border-line rounded-2xl shadow-sm">
+    <form onSubmit={handleSubmit} aria-label="Send a health message" className="p-3 bg-white border border-line rounded-2xl shadow-sm transition focus-within:border-teal-mid focus-within:ring-[3px] focus-within:ring-teal-mid/20">
       {files.length > 0 && (
         <div className="flex gap-2 flex-wrap px-1 pb-2">
           {files.map((f, idx) => (
@@ -155,7 +155,7 @@ export default function ChatInput({ onSend, disabled }) {
           onKeyDown={handleKeyDown}
           placeholder={listening ? 'Listening...' : "Describe how you're feeling, or attach a photo..."}
           rows={1}
-          className="flex-1 resize-none bg-transparent outline-none text-[15px] text-ink placeholder:text-ink-soft/60 py-2 px-2 max-h-40"
+          className="min-w-0 flex-1 resize-none bg-transparent outline-none text-base text-ink placeholder:text-ink-soft/60 py-2 px-2 max-h-40"
         />
 
         {SpeechRecognition && (

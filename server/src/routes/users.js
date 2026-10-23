@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const db = require('../db');
 const { authenticate } = require('../middleware/auth');
 const fileStorage = require('../services/fileStorage');
+const { serializeUser, serializeHealthProfile } = require('../utils/serializeUser');
 
 const router = express.Router();
 router.use(authenticate);
@@ -43,101 +44,117 @@ router.post(
   }
 );
 
+const USER_COLUMNS =
+  'id, full_name, email, phone, date_of_birth, sex, city, region, terms_accepted_at, health_data_consent_at, cookie_notice_accepted_at';
+const BLOOD_TYPES = ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+const PHONE_RE = /^[+()\d\s.-]{0,24}$/;
+
+async function loadProfile(userId) {
+  const user = await db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(userId);
+  if (!user) return null;
+  const healthRow = await db.prepare('SELECT * FROM user_health_profile WHERE user_id = ?').get(userId);
+  return { user: serializeUser(user), healthProfile: serializeHealthProfile(healthRow) };
+}
+
 router.get('/me', async (req, res) => {
-  const user = await db
-    .prepare('SELECT id, full_name, email, phone, date_of_birth, sex, city, region, created_at, terms_accepted_at, health_data_consent_at, cookie_notice_accepted_at FROM users WHERE id = ?')
-    .get(req.userId);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  const healthProfile = await db
-    .prepare('SELECT * FROM user_health_profile WHERE user_id = ?')
-    .get(req.userId);
-
-  res.json({ user, healthProfile });
+  const profile = await loadProfile(req.userId);
+  if (!profile) return res.status(404).json({ error: 'User not found' });
+  res.json(profile);
 });
 
-router.patch(
-  '/me',
+const listField = (name) =>
+  body(name)
+    .optional()
+    .isArray({ max: 30 })
+    .withMessage(`${name} must be a list of up to 30 items`)
+    .bail()
+    .custom((items) => items.every((item) => typeof item === 'string' && item.trim().length <= 100))
+    .withMessage(`Each ${name} entry must be 100 characters or fewer`);
+
+// Saves personal details and the health profile together, so a failure never leaves half a profile saved.
+router.put(
+  '/me/profile',
   [
-    body('fullName').optional().trim().isLength({ min: 2, max: 100 }).escape(),
-    body('phone').optional().trim().isLength({ max: 20 }),
-    body('dateOfBirth').optional().isISO8601(),
-    body('sex').optional().isIn(['male', 'female', 'other']),
-    body('city').optional().trim().isLength({ max: 100 }).escape(),
-    body('region').optional().trim().isLength({ max: 100 }).escape(),
+    body('fullName').optional().trim().isLength({ min: 2, max: 100 }).withMessage('Please enter your full name (at least 2 characters)'),
+    body('phone').optional().trim().matches(PHONE_RE).withMessage('Phone number can only contain digits, spaces, + ( ) . -'),
+    body('city').optional().trim().isLength({ max: 100 }).withMessage('City is too long'),
+    body('region').optional().trim().isLength({ max: 100 }).withMessage('Region is too long'),
+    body('dateOfBirth')
+      .optional({ values: 'falsy' })
+      .isISO8601({ strict: true })
+      .withMessage('Date of birth must be a valid date')
+      .bail()
+      .custom((value) => new Date(value) <= new Date() && new Date(value).getFullYear() >= 1900)
+      .withMessage('Date of birth must be in the past'),
+    body('sex').optional().isIn(['', 'male', 'female', 'other']).withMessage('Choose a valid option for sex'),
+    listField('allergies'),
+    listField('chronicConditions'),
+    listField('currentMedications'),
+    body('bloodType').optional().isIn(BLOOD_TYPES).withMessage('Choose a valid blood type'),
+    body('emergencyContactName').optional().trim().isLength({ max: 100 }).withMessage('Emergency contact name is too long'),
+    body('emergencyContactPhone').optional().trim().matches(PHONE_RE).withMessage('Emergency contact phone can only contain digits, spaces, + ( ) . -'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-    const fields = [];
-    const values = [];
-    const map = { fullName: 'full_name', phone: 'phone', dateOfBirth: 'date_of_birth', sex: 'sex', city: 'city', region: 'region' };
+    const b = req.body;
+    const clean = (list) => {
+      const seen = new Set();
+      const items = (list || []).map((item) => item.trim()).filter((item) => {
+        const key = item.toLowerCase();
+        if (!item || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      return JSON.stringify(items);
+    };
 
-    for (const [key, col] of Object.entries(map)) {
-      if (req.body[key] !== undefined) {
-        fields.push(`${col} = ?`);
-        values.push(req.body[key]);
+    const userFields = [];
+    const userValues = [];
+    const userMap = { fullName: 'full_name', phone: 'phone', city: 'city', region: 'region', dateOfBirth: 'date_of_birth', sex: 'sex' };
+    for (const [key, column] of Object.entries(userMap)) {
+      if (b[key] !== undefined) {
+        userFields.push(`${column} = ?`);
+        userValues.push(typeof b[key] === 'string' ? b[key].trim() || null : b[key]);
       }
     }
 
-    if (fields.length > 0) {
-      values.push(req.userId);
-      await db.prepare(`UPDATE users SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
+    const statements = [];
+    if (userFields.length) {
+      statements.push({
+        sql: `UPDATE users SET ${userFields.join(', ')}, updated_at = datetime('now') WHERE id = ?`,
+        args: [...userValues, req.userId],
+      });
     }
 
-    const user = await db
-      .prepare('SELECT id, full_name, email, phone, date_of_birth, sex, city, region FROM users WHERE id = ?')
-      .get(req.userId);
-    res.json({ user });
-  }
-);
+    // Upsert so accounts without a health row still save, and empty values really clear a field.
+    statements.push({ sql: 'INSERT OR IGNORE INTO user_health_profile (user_id) VALUES (?)', args: [req.userId] });
+    const healthFields = [];
+    const healthValues = [];
+    const listMap = { allergies: 'allergies', chronicConditions: 'chronic_conditions', currentMedications: 'current_medications' };
+    for (const [key, column] of Object.entries(listMap)) {
+      if (b[key] !== undefined) {
+        healthFields.push(`${column} = ?`);
+        healthValues.push(clean(b[key]));
+      }
+    }
+    const textMap = { bloodType: 'blood_type', emergencyContactName: 'emergency_contact_name', emergencyContactPhone: 'emergency_contact_phone' };
+    for (const [key, column] of Object.entries(textMap)) {
+      if (b[key] !== undefined) {
+        healthFields.push(`${column} = ?`);
+        healthValues.push(String(b[key]).trim() || null);
+      }
+    }
+    if (healthFields.length) {
+      statements.push({
+        sql: `UPDATE user_health_profile SET ${healthFields.join(', ')}, updated_at = datetime('now') WHERE user_id = ?`,
+        args: [...healthValues, req.userId],
+      });
+    }
 
-router.put(
-  '/me/health-profile',
-  [
-    body('allergies').optional().isArray(),
-    body('chronicConditions').optional().isArray(),
-    body('currentMedications').optional().isArray(),
-    body('bloodType').optional().trim().isLength({ max: 10 }),
-    body('emergencyContactName').optional().trim().isLength({ max: 100 }).escape(),
-    body('emergencyContactPhone').optional().trim().isLength({ max: 20 }),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
-
-    const {
-      allergies,
-      chronicConditions,
-      currentMedications,
-      bloodType,
-      emergencyContactName,
-      emergencyContactPhone,
-    } = req.body;
-
-    await db.prepare(
-      `UPDATE user_health_profile SET
-        allergies = COALESCE(?, allergies),
-        chronic_conditions = COALESCE(?, chronic_conditions),
-        current_medications = COALESCE(?, current_medications),
-        blood_type = COALESCE(?, blood_type),
-        emergency_contact_name = COALESCE(?, emergency_contact_name),
-        emergency_contact_phone = COALESCE(?, emergency_contact_phone),
-        updated_at = datetime('now')
-       WHERE user_id = ?`
-    ).run(
-      allergies ? JSON.stringify(allergies) : null,
-      chronicConditions ? JSON.stringify(chronicConditions) : null,
-      currentMedications ? JSON.stringify(currentMedications) : null,
-      bloodType || null,
-      emergencyContactName || null,
-      emergencyContactPhone || null,
-      req.userId
-    );
-
-    const healthProfile = await db.prepare('SELECT * FROM user_health_profile WHERE user_id = ?').get(req.userId);
-    res.json({ healthProfile });
+    await db.batch(statements);
+    res.json(await loadProfile(req.userId));
   }
 );
 

@@ -27,3 +27,5 @@ server/data/*.sqlite3
 
 # OS/editor
 .DS_Store
+# SQLite sidecar files (can contain user data)
+server/data/*.db-*

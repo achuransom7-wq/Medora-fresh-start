@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, ExternalLink, Search } from 'lucide-react';
 import client from '../api/client';
+import { getErrorMessage } from '../utils/apiError';
 
 /**
  * "Learn more" panel — runs a live, cited web lookup grounded in the assistant's
@@ -8,20 +9,22 @@ import client from '../api/client';
  * own words. This is the app's Research Mode / Web Search feature.
  */
 export default function ResearchPanel({ seedText, conversationId, onClose }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => `What does current medical guidance say about: ${seedText.length > 140 ? seedText.slice(0, 140) + '…' : seedText}`);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
   const [started, setStarted] = useState(false);
 
-  useEffect(() => {
-    // Suggest a reasonable default query from the assistant's message
+  // Start fresh whenever the message being researched changes (React-recommended "reset state on prop change").
+  const [seen, setSeen] = useState(seedText);
+  if (seen !== seedText) {
     const suggestion = seedText.length > 140 ? seedText.slice(0, 140) + '…' : seedText;
+    setSeen(seedText);
     setQuery(`What does current medical guidance say about: ${suggestion}`);
     setReport(null);
     setError(null);
     setStarted(false);
-  }, [seedText]);
+  }
 
   const runResearch = async () => {
     setLoading(true);
@@ -35,7 +38,7 @@ export default function ResearchPanel({ seedText, conversationId, onClose }) {
       });
       setReport(data.report);
     } catch (err) {
-      setError(err.response?.data?.error || 'Could not complete that lookup right now.');
+      setError(getErrorMessage(err, 'Could not complete that lookup right now.'));
     } finally {
       setLoading(false);
     }

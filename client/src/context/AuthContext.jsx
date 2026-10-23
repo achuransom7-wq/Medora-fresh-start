@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import client, { setAccessToken, setUnauthorizedHandler } from '../api/client';
-
-const AuthContext = createContext(null);
+import { AuthContext } from './useAuth';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -10,24 +9,28 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try {
       await client.post('/auth/logout');
-    } catch (e) {
-      // ignore
+    } catch {
+      // Signing out locally is enough if the request fails.
     }
     setAccessToken(null);
     setUser(null);
   }, []);
 
+  // Merge fresh server data into the signed-in user (e.g. after saving the profile).
+  const updateUser = useCallback((patch) => setUser((current) => (current ? { ...current, ...patch } : current)), []);
+
   useEffect(() => {
     setUnauthorizedHandler(() => setUser(null));
 
-    // Try to restore session via refresh cookie on load
+    // Restore the session from the refresh cookie. client.js retries transient failures
+    // (such as a sleeping server waking up), so only a real 401 logs the person out.
     (async () => {
       try {
         const { data } = await client.post('/auth/refresh');
         setAccessToken(data.accessToken);
-        const meRes = await client.get('/users/me');
-        setUser(meRes.data.user);
-      } catch (e) {
+        const me = await client.get('/users/me');
+        setUser(me.data.user);
+      } catch {
         setAccessToken(null);
       } finally {
         setLoading(false);
@@ -35,29 +38,24 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const { data } = await client.post('/auth/login', { email, password });
     setAccessToken(data.accessToken);
     setUser(data.user);
     return data.user;
-  };
+  }, []);
 
-  const register = async (payload) => {
+  const register = useCallback(async (payload) => {
     const { data } = await client.post('/auth/register', payload);
     setAccessToken(data.accessToken);
     setUser(data.user);
     return data.user;
-  };
+  }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, setUser, updateUser, loading, login, register, logout }),
+    [user, updateUser, loading, login, register, logout]
   );
-}
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

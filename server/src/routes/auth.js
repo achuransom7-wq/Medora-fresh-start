@@ -5,6 +5,7 @@ const { randomUUID, createHash } = require('crypto');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
+const { serializeUser } = require('../utils/serializeUser');
 const { signAccessToken, signRefreshToken, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
@@ -48,7 +49,7 @@ router.post(
   '/register',
   authLimiter,
   [
-    body('fullName').trim().isLength({ min: 2, max: 100 }).escape(),
+    body('fullName').trim().isLength({ min: 2, max: 100 }),
     body('email').isEmail().normalizeEmail(),
     body('password')
       .isLength({ min: 8, max: 72 })
@@ -81,20 +82,8 @@ router.post(
     await db.prepare(`INSERT INTO user_health_profile (user_id) VALUES (?)`).run(id);
 
     const accessToken = await issueTokens(res, id);
-    res.status(201).json({
-      accessToken,
-      user: {
-        id,
-        fullName,
-        email,
-        phone: phone || null,
-        city: city || null,
-        region: region || null,
-        terms_accepted_at: true,
-        health_data_consent_at: true,
-        cookie_notice_accepted_at: true,
-      },
-    });
+    const created = await db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+    res.status(201).json({ accessToken, user: serializeUser(created) });
   }
 );
 
@@ -117,20 +106,7 @@ router.post(
     }
 
     const accessToken = await issueTokens(res, user.id);
-    res.json({
-      accessToken,
-      user: {
-        id: user.id,
-        fullName: user.full_name,
-        email: user.email,
-        phone: user.phone,
-        city: user.city,
-        region: user.region,
-        terms_accepted_at: user.terms_accepted_at,
-        health_data_consent_at: user.health_data_consent_at,
-        cookie_notice_accepted_at: user.cookie_notice_accepted_at,
-      },
-    });
+    res.json({ accessToken, user: serializeUser(user) });
   }
 );
 

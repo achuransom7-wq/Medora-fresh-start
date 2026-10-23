@@ -1,5 +1,5 @@
 import { MapPin, Phone } from 'lucide-react';
-import { severityStyle } from './SeverityBadge';
+import { severityStyle } from './severityStyle';
 
 export default function ReferralCard({ suggestion, onBook, bookingId }) {
   if (!suggestion) return null;

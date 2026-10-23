@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, LogOut, User, X, Stethoscope, UserCircle, FolderPlus, Folder, ChevronDown, ChevronRight, Pencil, Trash2, Check, MoreVertical, PanelLeftClose, PanelLeftOpen, FileDown } from 'lucide-react';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { severityStyle } from './SeverityBadge';
-import { useAuth } from '../context/AuthContext';
+import { severityStyle } from './severityStyle';
+import { useAuth } from '../context/useAuth';
 import client from '../api/client';
 
 export default function Sidebar({ conversations, onNewChat, onConversationUpdated, onConversationDeleted, onDownloadThreadSummary, isOpen, onClose, collapsed, onToggleCollapsed }) {

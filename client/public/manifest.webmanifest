@@ -1,0 +1,15 @@
+{
+  "name": "Medora - AI Health Assistant",
+  "short_name": "Medora",
+  "description": "Free AI health assistant for Cameroon: symptom guidance and urgent-risk triage.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F4F8F7",
+  "theme_color": "#0F5E56",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

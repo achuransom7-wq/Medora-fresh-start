@@ -120,6 +120,16 @@ To optionally use a local language model, install Ollama on the server host, dow
 ollama pull llama3.2
 ```
 
+## Free LLM mode
+
+Medora answers with its built-in engine by default. To add a language model for free, set `AI_PROVIDER=openai-compatible` plus `LLM_BASE_URL`, `LLM_MODEL` and (if needed) `LLM_API_KEY` on the backend. Any open-weights model behind an OpenAI-compatible API works: your own Ollama or vLLM server (a model you fully control), or a hosted free tier such as Groq, OpenRouter, Cloudflare Workers AI or Google Gemini. Free tiers and limits change, so check each provider's current terms.
+
+Safety layers stay on regardless of model: red-flag keywords run first, the model can raise severity but never lower it below the dataset's suggestion, a red flag forces `urgent` plus an emergency banner, and any error falls back to the built-in engine. Messages sent to a hosted provider leave your server, so update your privacy notice first.
+
+## Availability
+
+Point your host's health check at `/healthz` (no database call). On free hosting that sleeps, an external pinger (for example UptimeRobot or cron-job.org) hitting `/healthz` every 5 minutes keeps it warm. The client also retries quietly while a sleeping server wakes up.
+
 ## What's not yet wired up
 
 - Verified provider records and clinic contact workflows are not configured in this repository. Add only reviewed provider details before enabling referrals for real users.
