@@ -329,9 +329,9 @@ const RESPONSES = {
     "I'm well, thanks! Let me know if a health question comes to mind, or if there's something you'd like to learn about today.",
   ],
   off_topic: [
-    "That's outside what I can help with. I'm built specifically for health and medical questions. Feel free to ask me about symptoms, conditions, or general wellness anytime!",
-    "I don't have anything useful to say about that one, sorry! My focus is health and medical topics. What's going on with your health today?",
-    "I'm not able to help with that. I'm a medical assistant, so I stick to health-related questions. Ask me about a symptom, a condition, or general wellness whenever you're ready.",
+    "That one's a little outside my area. I'm a health assistant, so I'm most useful for symptoms, health questions and wellness. Is there anything about your health I can help with?",
+    "I'll leave that one to someone better qualified! I'm here for health topics, so ask me about a symptom, a condition, or how to feel your best.",
+    "I can't help with that, but I'd be glad to chat about your health. What's on your mind?",
   ],
 };
 

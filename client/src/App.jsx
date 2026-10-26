@@ -1,9 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import ToastProvider from './components/ToastProvider';
 import ProtectedRoute from './components/ProtectedRoute';
+import BrandMark from './components/BrandMark';
 
 // Each page is its own chunk, so the first visit downloads far less code.
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -18,19 +19,20 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function Splash() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-cloud" role="status" aria-label="Loading">
-      <div className="flex h-10 w-10 animate-pulse items-center justify-center rounded-2xl bg-teal-deep">
-        <span className="font-display font-semibold text-white">M</span>
-      </div>
+    <div className="flex min-h-dvh items-center justify-center bg-canvas" role="status" aria-label="Loading">
+      <BrandMark size={48} className="animate-pulse" />
     </div>
   );
 }
 
-// Visitors see the public landing page; signed-in users go straight to their chat.
+// Visitors see the public landing page at "/"; signed-in users go straight to their chat.
+// Both "/" and "/chat/:id" use this one component so React keeps the chat page mounted while a
+// new conversation is created. Otherwise the page would reset and lose the first reply.
 function Home() {
   const { user, loading } = useAuth();
+  const { id } = useParams();
   if (loading) return <Splash />;
-  if (!user) return <LandingPage />;
+  if (!user && !id) return <LandingPage />;
   return (
     <ProtectedRoute>
       <ChatPage />
@@ -51,7 +53,7 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/consent" element={<ProtectedRoute><ConsentPage /></ProtectedRoute>} />
-              <Route path="/chat/:id" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+              <Route path="/chat/:id" element={<Home />} />
               <Route path="/referrals" element={<ProtectedRoute><ReferralsPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="*" element={<NotFoundPage />} />

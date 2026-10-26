@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, FileText, Check, X } from 'lucide-react';
+import { Search, FileText, Check, X, Copy, Phone, Siren } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import SeverityBadge from './SeverityBadge';
+import BrandMark from './BrandMark';
 import client from '../api/client';
 
 // The attachment endpoint requires auth, so a plain <img src> won't carry the
@@ -49,93 +50,121 @@ function AttachmentThumbs({ attachments }) {
   );
 }
 
-export default function ChatMessage({ message, onLearnMore, onFeedback, researchPanel }) {
+export default function ChatMessage({ message, onLearnMore, onFeedback, onEmergency, researchPanel }) {
   const isUser = message.role === 'user';
   const [feedback, setFeedback] = useState({});
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard access can be blocked. Nothing else to do.
+    }
+  };
 
   if (isUser) {
     return (
       <div className="flex justify-end animate-fade-in-up">
-        <div className="max-w-[80%] md:max-w-[65%] bg-teal-deep text-white rounded-2xl rounded-br-md px-4 py-3 shadow-sm">
+        <div className="max-w-[85%] rounded-3xl rounded-br-lg px-4 py-3 text-white shadow-md md:max-w-[65%]" style={{ background: 'var(--gradient-brand)' }}>
           <AttachmentThumbs attachments={message.attachments} />
-          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+          <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-start animate-fade-in-up">
-      <div className="w-full flex">
-        <div className="flex-1 min-w-0">
+    <div className="flex animate-fade-in-up items-start gap-3">
+      <BrandMark size={32} className="mt-1 hidden sm:inline-flex" />
+      <div className="min-w-0 flex-1">
+        <div className="max-w-3xl rounded-3xl rounded-tl-lg border border-line bg-surface px-4 py-3.5 shadow-sm sm:px-5">
           {message.severity && (
-            <div className="mb-1.5">
+            <div className="mb-2.5">
               <SeverityBadge severity={message.severity} />
             </div>
           )}
-          <div className="px-0.5 py-1 text-[15px] leading-relaxed text-ink">
-            <div>
-              <ReactMarkdown
-                components={{
-                  h2: ({ children }) => <h2 className="font-display text-base font-semibold text-ink mb-2">{children}</h2>,
-                  p: ({ children }) => <p className="my-2 first:mt-0 last:mb-0">{children}</p>,
-                  ul: ({ children }) => <ul className="my-2 list-disc pl-5 space-y-1">{children}</ul>,
-                  li: ({ children }) => <li>{children}</li>,
-                  blockquote: ({ children }) => <blockquote className="my-2 border-l-2 border-teal-mid pl-3 text-ink-soft">{children}</blockquote>,
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
-            </div>
-            {message.differential?.length > 0 && onFeedback && (
-              <div className="mt-3 border-t border-line pt-3 space-y-2">
-                <p className="text-xs text-ink-soft">How do these possibilities fit?</p>
-                {message.differential.map((candidate) => (
-                  <div key={candidate.name} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="font-medium text-ink truncate">{candidate.name}</span>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      <button
-                        type="button"
-                        title="This possibility sounds right"
-                        aria-label={`Confirm ${candidate.name}`}
-                        disabled={Boolean(feedback[candidate.name])}
-                        onClick={async () => {
-                          await onFeedback(candidate.name, 'confirmed');
-                          setFeedback((current) => ({ ...current, [candidate.name]: 'confirmed' }));
-                        }}
-                        className="inline-flex items-center gap-1 rounded-md border border-teal-mid/40 px-2 py-1 text-teal-deep hover:bg-teal-pale disabled:opacity-50"
-                      >
-                        <Check size={12} /> Right
-                      </button>
-                      <button
-                        type="button"
-                        title="This possibility does not sound right"
-                        aria-label={`Correct ${candidate.name}`}
-                        disabled={Boolean(feedback[candidate.name])}
-                        onClick={async () => {
-                          await onFeedback(candidate.name, 'corrected');
-                          setFeedback((current) => ({ ...current, [candidate.name]: 'corrected' }));
-                        }}
-                        className="inline-flex items-center gap-1 rounded-md border border-coral-ink/40 px-2 py-1 text-coral-ink hover:bg-coral/10 disabled:opacity-50"
-                      >
-                        <X size={12} /> Not this
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {onLearnMore && (
-            <button
-              onClick={onLearnMore}
-              className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-teal-mid hover:text-teal-deep transition-colors"
+          <div className="chat-prose text-[15px] text-ink">
+            <ReactMarkdown
+              components={{
+                h1: ({ children }) => <p className="font-bold">{children}</p>,
+                h2: ({ children }) => <p className="font-bold">{children}</p>,
+                h3: ({ children }) => <p className="font-bold">{children}</p>,
+                blockquote: ({ children }) => <blockquote className="border-l-2 border-brand pl-3 text-ink-soft">{children}</blockquote>,
+                a: ({ children }) => <span className="text-brand-text underline">{children}</span>,
+              }}
             >
-              <Search size={12} /> Learn more, with sources
+              {message.content}
+            </ReactMarkdown>
+          </div>
+
+          {message.severity === 'urgent' && (
+            <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-danger/40 bg-danger-soft p-3 sm:flex-row sm:items-center">
+              <p className="flex flex-1 items-center gap-2 text-sm font-semibold text-danger-ink">
+                <Siren size={18} className="shrink-0" /> Get help now. Don't wait for more replies.
+              </p>
+              <div className="flex gap-2">
+                <a href="tel:119" className="btn flex-1 bg-danger text-white hover:opacity-95 sm:flex-none"><Phone size={16} /> Call 119</a>
+                {onEmergency && (
+                  <button type="button" onClick={onEmergency} className="btn btn-secondary flex-1 sm:flex-none">More options</button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {message.differential?.length > 0 && onFeedback && (
+            <div className="mt-4 space-y-2 border-t border-line pt-3">
+              <p className="text-xs font-medium text-ink-soft">How do these possibilities fit?</p>
+              {message.differential.map((candidate) => (
+                <div key={candidate.name} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="truncate font-semibold text-ink">{candidate.name}</span>
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      type="button"
+                      title="This possibility sounds right"
+                      aria-label={`Confirm ${candidate.name}`}
+                      disabled={Boolean(feedback[candidate.name])}
+                      onClick={async () => {
+                        await onFeedback(candidate.name, 'confirmed');
+                        setFeedback((current) => ({ ...current, [candidate.name]: 'confirmed' }));
+                      }}
+                      className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-brand/40 px-2.5 text-brand-text hover:bg-brand-soft disabled:opacity-50"
+                    >
+                      <Check size={12} /> Right
+                    </button>
+                    <button
+                      type="button"
+                      title="This possibility does not sound right"
+                      aria-label={`Correct ${candidate.name}`}
+                      disabled={Boolean(feedback[candidate.name])}
+                      onClick={async () => {
+                        await onFeedback(candidate.name, 'corrected');
+                        setFeedback((current) => ({ ...current, [candidate.name]: 'corrected' }));
+                      }}
+                      className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-danger/40 px-2.5 text-danger-ink hover:bg-danger-soft disabled:opacity-50"
+                    >
+                      <X size={12} /> Not this
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-1">
+          <button type="button" onClick={copy} className="btn-ghost inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-colors">
+            {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+          </button>
+          {onLearnMore && (
+            <button type="button" onClick={onLearnMore} className="btn-ghost inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-colors">
+              <Search size={13} /> Learn more
             </button>
           )}
-          {researchPanel}
         </div>
+        {researchPanel}
       </div>
     </div>
   );

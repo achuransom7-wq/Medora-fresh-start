@@ -7,8 +7,8 @@ export default function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="h-dvh flex items-center justify-center bg-cloud">
-        <div className="w-10 h-10 rounded-2xl bg-teal-deep flex items-center justify-center animate-pulse">
+      <div className="h-dvh flex items-center justify-center bg-canvas">
+        <div className="w-10 h-10 rounded-2xl bg-brand flex items-center justify-center animate-pulse">
           <span className="text-white font-display font-semibold">M</span>
         </div>
       </div>

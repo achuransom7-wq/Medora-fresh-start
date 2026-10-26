@@ -19,7 +19,7 @@ export default function ProfileField({ label, value, onChange, error, hint, as =
         {children}
       </Tag>
       {error ? (
-        <p id={`${id}-error`} className="mt-1.5 text-xs text-coral-ink">{error}</p>
+        <p id={`${id}-error`} className="mt-1.5 text-xs text-danger-ink">{error}</p>
       ) : hint ? (
         <p id={`${id}-hint`} className="mt-1.5 text-xs text-ink-soft">{hint}</p>
       ) : null}

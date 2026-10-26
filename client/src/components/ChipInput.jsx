@@ -32,15 +32,15 @@ export default function ChipInput({ label, values, onChange, placeholder, hint, 
   return (
     <div>
       <label htmlFor={id} className="field-label">{label}</label>
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-cloud p-2 transition focus-within:border-teal-mid focus-within:bg-white focus-within:ring-[3px] focus-within:ring-teal-mid/20">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface-2 p-2 transition focus-within:border-brand focus-within:bg-surface focus-within:ring-4 focus-within:ring-brand/20">
         {values.map((value) => (
-          <span key={value} className="inline-flex max-w-full items-center gap-1 rounded-full bg-mint px-3 py-1 text-sm text-teal-deep">
+          <span key={value} className="inline-flex max-w-full items-center gap-1 rounded-full bg-brand-soft px-3 py-1 text-sm text-brand-text">
             <span className="truncate">{value}</span>
             <button
               type="button"
               onClick={() => onChange(values.filter((v) => v !== value))}
               aria-label={`Remove ${value}`}
-              className="-mr-1 rounded-full p-1 hover:bg-teal-deep/10"
+              className="-mr-1 rounded-full p-1 hover:bg-brand/10"
             >
               <X size={13} />
             </button>

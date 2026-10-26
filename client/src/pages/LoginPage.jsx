@@ -37,7 +37,7 @@ export default function LoginPage() {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div role="alert" className="bg-coral-soft text-coral-ink text-sm px-3 py-2.5 rounded-xl">{error}</div>
+          <div role="alert" className="bg-danger-soft text-danger-ink text-sm px-3 py-2.5 rounded-xl">{error}</div>
         )}
         <div>
           <label htmlFor="login-email" className="block text-sm font-medium text-ink mb-1.5">Email</label>
@@ -69,7 +69,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => setShowPassword((visible) => !visible)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft hover:text-teal-deep"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft hover:text-brand-text"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -78,14 +78,14 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-teal-deep text-white font-medium py-2.5 rounded-xl hover:bg-teal-mid transition-colors disabled:opacity-60"
+          className="btn btn-primary w-full"
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
       <p className="text-center text-sm text-ink-soft mt-6">
         New to Medora?{' '}
-        <Link to="/register" className="text-teal-deep font-medium hover:underline">
+        <Link to="/register" className="text-brand-text font-medium hover:underline">
           Create an account
         </Link>
       </p>

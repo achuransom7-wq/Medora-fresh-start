@@ -8,6 +8,7 @@ import PreferencesPanel from '../components/PreferencesPanel';
 import VitalsPanel from '../components/VitalsPanel';
 import ChipInput from '../components/ChipInput';
 import ProfileField from '../components/ProfileField';
+import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/toastContext';
 import usePageMeta from '../hooks/usePageMeta';
@@ -163,7 +164,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="flex h-dvh bg-cloud">
+    <div className="flex h-dvh bg-canvas">
       <Sidebar
         conversations={conversations}
         onNewChat={handleNewChat}
@@ -176,21 +177,21 @@ export default function ProfilePage() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-white/85 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
-          <button type="button" onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="-ml-1 rounded-lg p-2 text-ink-soft hover:bg-cloud md:hidden">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-surface/85 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
+          <button type="button" onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="-ml-1 rounded-lg p-2 text-ink-soft hover:bg-canvas md:hidden">
             <Menu size={22} />
           </button>
-          <button type="button" onClick={() => navigate('/')} className="hidden items-center gap-1.5 text-sm text-ink-soft hover:text-teal-deep md:flex">
+          <button type="button" onClick={() => navigate('/')} className="hidden items-center gap-1.5 text-sm text-ink-soft hover:text-brand-text md:flex">
             <ArrowLeft size={16} /> Back to chat
           </button>
-          <span className="font-display font-semibold text-teal-deep md:hidden">Profile</span>
+          <span className="font-display font-semibold text-brand-text md:hidden">Profile</span>
         </header>
 
         <main id="main" className="mx-auto w-full max-w-2xl px-4 py-6 pb-32 sm:py-10">
           <h1 className="font-display text-2xl font-semibold text-ink sm:text-3xl">Your profile</h1>
           <p className="mb-6 mt-1.5 text-sm leading-relaxed text-ink-soft">
             Optional details help Medora personalize its guidance. If an AI model is configured for this app, relevant chat and profile details may be sent to it. See the{' '}
-            <Link to="/legal/privacy" className="text-teal-deep underline underline-offset-2">Privacy Policy</Link>.
+            <Link to="/legal/privacy" className="text-brand-text underline underline-offset-2">Privacy Policy</Link>.
           </p>
 
           {status === 'loading' && (
@@ -201,7 +202,7 @@ export default function ProfilePage() {
 
           {status === 'error' && (
             <div className="card text-center" role="alert">
-              <p className="text-sm text-coral-ink">{loadError}</p>
+              <p className="text-sm text-danger-ink">{loadError}</p>
               <button type="button" onClick={loadProfile} className="btn btn-secondary mt-4">
                 <RefreshCw size={16} /> Try again
               </button>
@@ -259,6 +260,13 @@ export default function ProfilePage() {
               <h2 className="text-base font-semibold text-ink">Preferences and history</h2>
               <p className="text-xs text-ink-soft">These save automatically when you change them.</p>
             </div>
+            <section className="card flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-ink">Appearance</h2>
+                <p className="text-xs text-ink-soft">Light, dark, or match your device.</p>
+              </div>
+              <ThemeToggle labelled />
+            </section>
             <PreferencesPanel />
             <MemoryPanel />
             <VitalsPanel />
@@ -272,7 +280,7 @@ export default function ProfilePage() {
             </div>
             <div className="border-t border-line pt-5">
               <div className="flex items-start gap-3">
-                <Trash2 size={18} className="mt-0.5 shrink-0 text-coral" />
+                <Trash2 size={18} className="mt-0.5 shrink-0 text-danger" />
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-semibold text-ink">Delete account</h3>
                   <p className="mb-3 mt-1 text-xs text-ink-soft">Permanently delete your profile, conversations, health information and uploaded files.</p>
@@ -286,7 +294,7 @@ export default function ProfilePage() {
         </main>
 
         {status === 'ready' && dirty && (
-          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:left-auto md:right-0 md:w-[calc(100%-18rem)]">
+          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:left-auto md:right-0 md:w-[calc(100%-18rem)]">
             <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
               <p className="hidden text-sm text-ink-soft sm:block" role="status">You have unsaved changes</p>
               <div className="flex w-full gap-2 sm:w-auto">
@@ -303,7 +311,7 @@ export default function ProfilePage() {
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="delete-title" onClick={() => setShowDeleteModal(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="delete-title" className="font-display text-xl font-semibold text-ink">Delete your account?</h2>
@@ -313,7 +321,7 @@ export default function ProfilePage() {
             </div>
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button type="button" onClick={() => setShowDeleteModal(false)} className="btn btn-secondary" autoFocus>Cancel</button>
-              <button type="button" onClick={handleDeleteAccount} className="btn bg-coral-ink text-white hover:opacity-90">Delete account</button>
+              <button type="button" onClick={handleDeleteAccount} className="btn bg-danger text-white hover:opacity-90">Delete account</button>
             </div>
           </div>
         </div>

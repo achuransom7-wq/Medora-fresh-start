@@ -45,9 +45,9 @@ export default function ResearchPanel({ seedText, conversationId, onClose }) {
   };
 
   return (
-    <div className="bg-white border border-line rounded-2xl shadow-sm p-4 animate-fade-in-up">
+    <div className="bg-surface border border-line rounded-2xl shadow-sm p-4 animate-fade-in-up">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 text-teal-deep font-medium text-sm">
+        <div className="flex items-center gap-2 text-brand-text font-medium text-sm">
           <Search size={15} /> Learn more
         </div>
         <button onClick={onClose} aria-label="Close" className="text-ink-soft hover:text-ink p-1">
@@ -61,19 +61,19 @@ export default function ResearchPanel({ seedText, conversationId, onClose }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         rows={2}
-        className="w-full text-sm border border-line rounded-xl px-3 py-2 outline-none focus:border-teal-mid resize-none text-ink"
+        className="w-full text-sm border border-line rounded-xl px-3 py-2 outline-none focus:border-brand resize-none text-ink"
         placeholder="What would you like Medora to look up?"
       />
 
       <button
         onClick={runResearch}
         disabled={loading || !query.trim()}
-        className="mt-2 bg-teal-deep text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-teal-mid transition-colors disabled:opacity-40"
+        className="mt-2 bg-brand text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-brand-hover transition-colors disabled:opacity-40"
       >
         {loading ? 'Researching…' : 'Research this question'}
       </button>
 
-      {error && <p role="alert" className="text-sm text-coral-ink mt-3">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger-ink mt-3">{error}</p>}
 
       {report && (
         <div aria-live="polite" className="mt-4 border-t border-line pt-3">
@@ -88,7 +88,7 @@ export default function ResearchPanel({ seedText, conversationId, onClose }) {
                     href={s.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-teal-mid hover:text-teal-deep hover:underline break-all"
+                    className="flex items-center gap-1.5 text-xs text-brand-text hover:text-brand-text hover:underline break-all"
                   >
                     <ExternalLink size={11} aria-hidden="true" className="flex-shrink-0" /> {s.title}<span className="sr-only"> (opens in a new tab)</span>
                   </a>

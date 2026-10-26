@@ -14,12 +14,12 @@ const CATEGORY_LABEL = {
 };
 
 const CATEGORY_COLOR = {
-  allergy: 'bg-coral-soft text-coral-ink',
-  condition: 'bg-amber-soft text-amber-ink',
-  medication: 'bg-mint text-teal-deep',
-  pattern: 'bg-orange-soft text-orange-ink',
-  preference: 'bg-cloud text-ink-soft',
-  other: 'bg-cloud text-ink-soft',
+  allergy: 'bg-danger-soft text-danger-ink',
+  condition: 'bg-caution-soft text-caution-ink',
+  medication: 'bg-brand-soft text-brand-text',
+  pattern: 'bg-warn-soft text-warn-ink',
+  preference: 'bg-canvas text-ink-soft',
+  other: 'bg-canvas text-ink-soft',
 };
 
 export default function MemoryPanel() {
@@ -75,9 +75,9 @@ export default function MemoryPanel() {
     <section className="card">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-ink text-sm flex items-center gap-2">
-          <Brain size={15} className="text-teal-deep" /> What Medora remembers
+          <Brain size={15} className="text-brand-text" /> What Medora remembers
         </h2>
-        <button type="button" onClick={() => setAdding((v) => !v)} aria-expanded={adding} className="-mr-2 rounded-lg p-2.5 text-teal-mid hover:bg-cloud hover:text-teal-deep" aria-label="Add memory">
+        <button type="button" onClick={() => setAdding((v) => !v)} aria-expanded={adding} className="-mr-2 rounded-lg p-2.5 text-brand-text hover:bg-canvas hover:text-brand-text" aria-label="Add memory">
           <Plus size={16} />
         </button>
       </div>
@@ -116,7 +116,7 @@ export default function MemoryPanel() {
       )}
 
       {loadError ? (
-        <p className="text-sm text-coral-ink" role="alert">
+        <p className="text-sm text-danger-ink" role="alert">
           We couldn't load your memories.{' '}
           <button type="button" onClick={load} className="underline">Try again</button>
         </p>
@@ -127,12 +127,12 @@ export default function MemoryPanel() {
       ) : (
         <div className="space-y-2">
           {memories.map((m) => (
-            <div key={m.id} className="flex items-start gap-2 bg-cloud rounded-xl px-3 py-2.5">
+            <div key={m.id} className="flex items-start gap-2 bg-canvas rounded-xl px-3 py-2.5">
               <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLOR[m.category]}`}>
                 {CATEGORY_LABEL[m.category]}
               </span>
               <p className="flex-1 text-sm text-ink">{m.content}</p>
-              <button type="button" onClick={() => forget(m.id)} aria-label={`Forget: ${m.content}`} className="-m-1.5 shrink-0 rounded-lg p-2 text-ink-soft hover:text-coral-ink">
+              <button type="button" onClick={() => forget(m.id)} aria-label={`Forget: ${m.content}`} className="-m-1.5 shrink-0 rounded-lg p-2 text-ink-soft hover:text-danger-ink">
                 <X size={14} />
               </button>
             </div>

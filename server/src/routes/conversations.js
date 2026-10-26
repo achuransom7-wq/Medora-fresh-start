@@ -243,11 +243,16 @@ router.post(
 
     try {
       // Load prior messages for context (last 20 turns to keep it bounded)
-      const priorMessages = await db
-        .prepare(
-          `SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC LIMIT 20`
-        )
-        .all(conversation.id);
+      // Newest 20 messages, returned oldest-first. (Previously this loaded the FIRST 20, so long chats lost recent context.)
+      const priorMessages = (
+        await db
+          .prepare(`SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 20`)
+          .all(conversation.id)
+      ).reverse();
+
+      const patient = await db
+        .prepare('SELECT full_name, date_of_birth, sex, city, region FROM users WHERE id = ?')
+        .get(req.userId);
 
       const healthProfile = await db
         .prepare('SELECT * FROM user_health_profile WHERE user_id = ?')
@@ -283,8 +288,9 @@ router.post(
       }
 
       // Get AI response (vision-aware, memory-aware, style/language-aware)
-      const { text, severity, redFlagOverride, differential } = await getConsultationResponse(priorMessages, content, {
+      const { text, severity, redFlagOverride, differential, suggestions } = await getConsultationResponse(priorMessages, content, {
         healthProfile,
+        patient: patient && { fullName: patient.full_name, dateOfBirth: patient.date_of_birth, sex: patient.sex, city: patient.city, region: patient.region },
         memories,
         attachments,
         preferences,
@@ -299,14 +305,15 @@ router.post(
       ).run(assistantMsgId, conversation.id, text, severity);
 
       // Update conversation severity + timestamp
+      // Small talk has no severity, so it must not erase the conversation's earlier assessment.
       await db.prepare(
-        `UPDATE conversations SET latest_severity = ?, updated_at = datetime('now') WHERE id = ?`
+        `UPDATE conversations SET latest_severity = COALESCE(?, latest_severity), updated_at = datetime('now') WHERE id = ?`
       ).run(severity, conversation.id);
 
       // Generate a title from the first user message before returning the response.
       let conversationTitle = conversation.title;
       if (conversation.title === 'New consultation' && priorMessages.length === 0) {
-        conversationTitle = await generateTitle(content);
+        conversationTitle = await generateTitle(content, text);
         await db.prepare(`UPDATE conversations SET title = ? WHERE id = ?`).run(conversationTitle, conversation.id);
       }
 
@@ -347,6 +354,7 @@ router.post(
         conversation: { ...conversation, title: conversationTitle },
         redFlagOverride,
         referralSuggestion,
+        suggestions: suggestions || [],
       });
     } catch (err) {
       console.error('Chat error:', err);

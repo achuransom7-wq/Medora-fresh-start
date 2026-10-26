@@ -39,10 +39,10 @@ function TrendChart({ series }) {
       role="img"
       aria-label={`Trend of ${series.length} readings from ${min} to ${max}. Latest ${series[series.length - 1].value}.`}
     >
-      <polyline points={points.join(' ')} fill="none" stroke="var(--color-teal-mid)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <polyline points={points.join(' ')} fill="none" stroke="var(--color-brand)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
       {points.map((p, i) => {
         const [x, y] = p.split(',');
-        return <circle key={i} cx={x} cy={y} r="2.5" fill="var(--color-teal-deep)" />;
+        return <circle key={i} cx={x} cy={y} r="2.5" fill="var(--color-brand)" />;
       })}
     </svg>
   );
@@ -116,9 +116,9 @@ export default function VitalsPanel() {
     <section className="card">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-ink text-sm flex items-center gap-2">
-          <Activity size={15} className="text-teal-deep" /> Health trends
+          <Activity size={15} className="text-brand-text" /> Health trends
         </h2>
-        <button type="button" onClick={() => setAdding((v) => !v)} aria-expanded={adding} className="-mr-2 rounded-lg p-2.5 text-teal-mid hover:bg-cloud hover:text-teal-deep" aria-label="Log a reading">
+        <button type="button" onClick={() => setAdding((v) => !v)} aria-expanded={adding} className="-mr-2 rounded-lg p-2.5 text-brand-text hover:bg-canvas hover:text-brand-text" aria-label="Log a reading">
           <Plus size={16} />
         </button>
       </div>
@@ -154,7 +154,7 @@ export default function VitalsPanel() {
       )}
 
       {loadError ? (
-        <p className="text-sm text-coral-ink" role="alert">
+        <p className="text-sm text-danger-ink" role="alert">
           We couldn't load this chart.{' '}
           <button type="button" onClick={() => { setLoadError(false); setRefresh((n) => n + 1); }} className="underline">Try again</button>
         </p>
@@ -179,7 +179,7 @@ export default function VitalsPanel() {
 
 function Stat({ label, value }) {
   return (
-    <div className="bg-cloud rounded-lg py-2">
+    <div className="bg-canvas rounded-lg py-2">
       <p className="text-sm font-semibold text-ink">{value}</p>
       <p className="text-[10px] text-ink-soft uppercase tracking-wide">{label}</p>
     </div>

@@ -57,8 +57,8 @@ export default function PreferencesPanel() {
   return (
     <section className="card">
       <h2 className="font-semibold text-ink text-sm mb-1 flex items-center gap-2">
-        <MessageSquare size={15} className="text-teal-deep" /> How Medora talks to you
-        {saved && <Check size={14} className="text-teal-deep" />}
+        <MessageSquare size={15} className="text-brand-text" /> How Medora talks to you
+        {saved && <Check size={14} className="text-brand-text" />}
       </h2>
       <p className="text-xs text-ink-soft mb-4">Adjust the tone and language Medora uses in every conversation.</p>
 
@@ -73,8 +73,8 @@ export default function PreferencesPanel() {
               onClick={() => update({ communication_style: s.value })}
               className={`text-left min-h-11 px-3 py-2.5 rounded-xl border text-sm transition-colors ${
                 prefs.communication_style === s.value
-                  ? 'border-teal-deep bg-mint-soft text-teal-deep font-medium'
-                  : 'border-line text-ink hover:bg-cloud'
+                  ? 'border-brand bg-surface-2 text-brand-text font-medium'
+                  : 'border-line text-ink hover:bg-canvas'
               }`}
             >
               <div>{s.label}</div>
@@ -95,8 +95,8 @@ export default function PreferencesPanel() {
               onClick={() => update({ language: l.value })}
               className={`min-h-11 px-3 py-2 rounded-xl border text-sm transition-colors ${
                 prefs.language === l.value
-                  ? 'border-teal-deep bg-mint-soft text-teal-deep font-medium'
-                  : 'border-line text-ink hover:bg-cloud'
+                  ? 'border-brand bg-surface-2 text-brand-text font-medium'
+                  : 'border-line text-ink hover:bg-canvas'
               }`}
             >
               {l.label}

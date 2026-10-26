@@ -93,19 +93,6 @@ const policies = {
       },
     ],
   },
-  refunds: {
-    title: 'Refund Policy',
-    sections: [
-      {
-        heading: 'No paid services in this build',
-        paragraphs: [
-          'The current Medora application has no checkout, paid subscription, or payment processor. It does not collect payment through the app, so there are currently no app purchases or app refunds to process.',
-          'If you believe you were charged in connection with Medora, do not share card details in chat. The project has not supplied a verified business identity or support contact; that information must be published before any paid offering is introduced.',
-          'A paid feature must not launch until the operator publishes a complete, legally reviewed pricing, cancellation, and refund policy for each market where it is offered.',
-        ],
-      },
-    ],
-  },
 };
 
 export default function LegalPage() {
@@ -116,15 +103,15 @@ export default function LegalPage() {
   if (!policy) return <Navigate to="/legal/privacy" replace />;
 
   return (
-    <main className="min-h-dvh bg-cloud px-4 py-8 sm:px-6">
-      <article className="mx-auto max-w-3xl rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-10">
-        <Link to="/login" className="text-sm font-medium text-teal-deep underline underline-offset-4">
+    <main className="min-h-dvh bg-canvas px-4 py-8 sm:px-6">
+      <article className="mx-auto max-w-3xl rounded-2xl border border-line bg-surface p-6 shadow-sm sm:p-10">
+        <Link to="/" className="text-sm font-semibold text-brand-text underline underline-offset-4">
           Back to Medora
         </Link>
-        <p className="mt-6 rounded-lg border border-orange-ink/30 bg-orange-soft p-4 text-sm text-orange-ink" role="note">
+        <p className="mt-6 rounded-lg border border-warn-ink/30 bg-warn-soft p-4 text-sm text-warn-ink" role="note">
           Draft for review: the project has not provided a verified legal operator name, business address, or privacy contact. Add those details and obtain qualified local legal review before public launch. This page does not certify legal compliance.
         </p>
-        <h1 className="mt-6 font-display text-3xl font-semibold text-ink">{policy.title}</h1>
+        <h1 className="mt-6 font-display text-3xl font-extrabold text-ink">{policy.title}</h1>
         <p className="mt-2 text-sm text-ink-soft">Version 1.0 · 11 October 2026</p>
         <div className="mt-8 space-y-7">
           {policy.sections.map((section) => (
@@ -137,10 +124,9 @@ export default function LegalPage() {
           ))}
         </div>
         <nav aria-label="Legal policies" className="mt-10 flex flex-wrap gap-x-5 gap-y-3 border-t border-line pt-5 text-sm">
-          <Link to="/legal/privacy" className="font-medium text-teal-deep underline underline-offset-4">Privacy</Link>
-          <Link to="/legal/terms" className="font-medium text-teal-deep underline underline-offset-4">Terms</Link>
-          <Link to="/legal/cookies" className="font-medium text-teal-deep underline underline-offset-4">Cookies</Link>
-          <Link to="/legal/refunds" className="font-medium text-teal-deep underline underline-offset-4">Refunds</Link>
+          <Link to="/legal/privacy" className="font-medium text-brand-text underline underline-offset-4">Privacy</Link>
+          <Link to="/legal/terms" className="font-medium text-brand-text underline underline-offset-4">Terms</Link>
+          <Link to="/legal/cookies" className="font-medium text-brand-text underline underline-offset-4">Cookies</Link>
         </nav>
       </article>
     </main>

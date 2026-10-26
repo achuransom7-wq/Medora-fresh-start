@@ -1,57 +1,59 @@
-import PulseDivider from './PulseDivider';
 import { Link } from 'react-router-dom';
+import { ShieldCheck, Languages, HeartPulse } from 'lucide-react';
+import BrandMark from './BrandMark';
+import ChatPreview from './ChatPreview';
+
+const POINTS = [
+  { Icon: HeartPulse, text: 'Safety checks run before every reply' },
+  { Icon: Languages, text: 'English, French and Pidgin' },
+  { Icon: ShieldCheck, text: 'Delete your data any time' },
+];
 
 export default function AuthLayout({ title, subtitle, children }) {
   return (
-    <div className="min-h-dvh flex bg-cloud">
-      {/* Left visual panel - health-forward first impression */}
-      <div className="hidden lg:flex lg:w-1/2 bg-teal-deep relative overflow-hidden flex-col justify-between p-12">
-        <div className="absolute inset-0 opacity-[0.07]" style={{
-          backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-          backgroundSize: '28px 28px'
-        }} />
-        <div className="relative z-10 flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
-            <span className="text-white font-display font-semibold">M</span>
-          </div>
-          <span className="text-white font-display font-semibold text-xl">Medora</span>
+    <div className="flex min-h-dvh bg-canvas">
+      {/* Brand panel */}
+      <div className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex lg:w-[48%]" style={{ background: 'var(--gradient-brand)' }}>
+        <div className="absolute inset-0 opacity-[0.12]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '26px 26px' }} aria-hidden="true" />
+        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
+        <Link to="/" className="relative z-10 flex items-center gap-3 text-white" aria-label="Medora home">
+          <BrandMark size={40} className="bg-white/20 !shadow-none" />
+          <span className="font-display text-xl font-extrabold">Medora</span>
+        </Link>
+
+        <div className="relative z-10 max-w-md">
+          <h2 className="font-display text-4xl font-extrabold leading-tight text-white">Calm, clear guidance whenever you need it.</h2>
+          <ul className="mt-6 space-y-3">
+            {POINTS.map(({ Icon, text }) => (
+              <li key={text} className="flex items-center gap-3 text-white/90">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15"><Icon size={18} /></span>
+                {text}
+              </li>
+            ))}
+          </ul>
+          <ChatPreview className="mt-9 !shadow-2xl" />
         </div>
 
-        <div className="relative z-10">
-          <h2 className="font-display text-4xl leading-tight text-white font-medium mb-4">
-            Calm, clear guidance<br />whenever you need it.
-          </h2>
-            <p className="text-mint text-lg max-w-md">
-              Describe your symptoms and keep health notes together in one place.
-          </p>
-          <div className="mt-8 max-w-xs">
-            <PulseDivider color="rgba(255,255,255,0.35)" />
-          </div>
-        </div>
-
-        <p className="relative z-10 text-mint text-sm">Not a substitute for professional medical care.</p>
+        <p className="relative z-10 text-sm text-white/75">Not a substitute for professional medical care.</p>
       </div>
 
-      {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
+      {/* Form panel */}
+      <main id="main" className="flex flex-1 items-center justify-center p-5 sm:p-10">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden flex items-center gap-2 justify-center mb-8">
-            <div className="w-8 h-8 rounded-lg bg-teal-deep flex items-center justify-center">
-              <span className="text-white font-display font-semibold text-sm">M</span>
-            </div>
-            <span className="font-display font-semibold text-xl text-teal-deep">Medora</span>
-          </div>
-          <h1 className="font-display text-2xl font-semibold text-ink mb-1">{title}</h1>
-          <p className="text-ink-soft text-sm mb-7">{subtitle}</p>
+          <Link to="/" className="mb-8 flex items-center justify-center gap-2.5 lg:hidden" aria-label="Medora home">
+            <BrandMark size={36} />
+            <span className="font-display text-xl font-extrabold text-ink">Medora</span>
+          </Link>
+          <h1 className="font-display text-3xl font-extrabold text-ink">{title}</h1>
+          <p className="mb-7 mt-1.5 text-sm text-ink-soft">{subtitle}</p>
           {children}
           <nav aria-label="Legal policies" className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
-            <Link to="/legal/privacy" className="text-teal-deep underline underline-offset-4">Privacy</Link>
-            <Link to="/legal/terms" className="text-teal-deep underline underline-offset-4">Terms</Link>
-            <Link to="/legal/cookies" className="text-teal-deep underline underline-offset-4">Cookies</Link>
-            <Link to="/legal/refunds" className="text-teal-deep underline underline-offset-4">Refunds</Link>
+            <Link to="/legal/privacy" className="text-ink-soft underline underline-offset-4 hover:text-brand-text">Privacy</Link>
+            <Link to="/legal/terms" className="text-ink-soft underline underline-offset-4 hover:text-brand-text">Terms</Link>
+            <Link to="/legal/cookies" className="text-ink-soft underline underline-offset-4 hover:text-brand-text">Cookies</Link>
           </nav>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

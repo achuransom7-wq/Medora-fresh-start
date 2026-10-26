@@ -34,10 +34,10 @@ export default function ToastProvider({ children }) {
             key={t.id}
             role={t.type === 'error' ? 'alert' : 'status'}
             className={`animate-toast-in pointer-events-auto flex w-full max-w-md items-start gap-2.5 rounded-xl border px-4 py-3 text-sm shadow-lg ${
-              t.type === 'error' ? 'border-coral/40 bg-coral-soft text-coral-ink' : 'border-teal-mid/30 bg-white text-ink'
+              t.type === 'error' ? 'border-danger/40 bg-danger-soft text-danger-ink' : 'border-brand/30 bg-surface text-ink'
             }`}
           >
-            {t.type === 'error' ? <AlertCircle size={18} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-teal-mid" />}
+            {t.type === 'error' ? <AlertCircle size={18} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-brand-text" />}
             <p className="flex-1">{t.message}</p>
             <button type="button" onClick={() => dismiss(t.id)} aria-label="Dismiss" className="shrink-0 opacity-70 hover:opacity-100">
               <X size={16} />

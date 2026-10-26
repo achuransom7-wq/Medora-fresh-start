@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Menu, ShieldAlert, FileDown, Volume2, VolumeX } from 'lucide-react';
+import { Menu, ShieldAlert, FileDown, Volume2, VolumeX, Siren, Stethoscope, BookOpen, ClipboardList, Leaf } from 'lucide-react';
 import client from '../api/client';
 import Sidebar from '../components/Sidebar';
 import ChatMessage from '../components/ChatMessage';
@@ -8,6 +8,9 @@ import ChatInput from '../components/ChatInput';
 import TypingIndicator from '../components/TypingIndicator';
 import ReferralCard from '../components/ReferralCard';
 import ResearchPanel from '../components/ResearchPanel';
+import EmergencyDialog from '../components/EmergencyDialog';
+import BrandMark from '../components/BrandMark';
+import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/toastContext';
 import usePageMeta from '../hooks/usePageMeta';
 import { getErrorMessage } from '../utils/apiError';
@@ -82,6 +85,10 @@ export default function ChatPage() {
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [preferences, setPreferences] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const justCreatedRef = useRef(null);
+  const { user } = useAuth();
   const [researchTarget, setResearchTarget] = useState(null);
   const scrollRef = useRef(null);
   const messageRefs = useRef({});
@@ -102,7 +109,14 @@ export default function ChatPage() {
 
   useEffect(() => {
     setReferralSuggestion(null);
+    setSuggestions([]);
     setResearchTarget(null);
+    // A conversation this page just created is already on screen, so there is nothing to load.
+    // Loading it would race with the reply that is still on its way and could wipe it out.
+    if (id && id === justCreatedRef.current) {
+      justCreatedRef.current = null;
+      return;
+    }
     if (!id) {
       setMessages([]);
       return;
@@ -170,6 +184,7 @@ export default function ChatPage() {
       try {
         const { data } = await client.post('/conversations');
         conversationId = data.conversation.id;
+        justCreatedRef.current = conversationId;
         setConversations((prev) => [data.conversation, ...prev]);
         navigate(`/chat/${conversationId}`, { replace: true });
       } catch (err) {
@@ -187,6 +202,7 @@ export default function ChatPage() {
     };
     setMessages((prev) => [...prev, optimisticUserMsg]);
     setSending(true);
+    setSuggestions([]);
     setReferralSuggestion(null);
 
     try {
@@ -202,6 +218,7 @@ export default function ChatPage() {
         data.assistantMessage,
       ]);
       if (data.referralSuggestion) setReferralSuggestion(data.referralSuggestion);
+      setSuggestions(data.suggestions || []);
       speakLatestReply(data.assistantMessage.content);
       loadConversations();
     } catch (err) {
@@ -280,7 +297,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-dvh bg-cloud">
+    <div className="flex h-dvh bg-canvas">
       <Sidebar
         conversations={conversations}
         onNewChat={handleNewChat}
@@ -295,19 +312,20 @@ export default function ChatPage() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-line bg-white/80 backdrop-blur-sm">
-          <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="text-ink-soft md:hidden">
+        <header className="glass sticky top-0 z-10 flex items-center gap-2 border-b border-line px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:gap-3 sm:px-5">
+          <button type="button" onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="btn-ghost -ml-1 rounded-xl p-2.5 md:hidden">
             <Menu size={22} />
           </button>
-          <span className="font-display font-semibold text-teal-deep md:hidden">Medora</span>
+          <span className="flex items-center gap-2 font-display font-bold text-ink md:hidden"><BrandMark size={28} /><span className="hidden min-[440px]:inline">Medora</span></span>
           <div className="flex-1" />
           {hasVoiceSupport && (
             <button
+              type="button"
               onClick={toggleAutoSpeak}
               aria-label={preferences?.auto_speak_replies ? 'Turn off spoken replies' : 'Turn on spoken replies'}
               title={preferences?.auto_speak_replies ? 'Spoken replies: on' : 'Spoken replies: off'}
-              className={`p-2 rounded-lg transition-colors ${
-                preferences?.auto_speak_replies ? 'text-teal-deep bg-mint-soft' : 'text-ink-soft hover:bg-cloud'
+              className={`rounded-xl p-2.5 transition-colors ${
+                preferences?.auto_speak_replies ? 'bg-brand-soft text-brand-text' : 'btn-ghost'
               }`}
             >
               {preferences?.auto_speak_replies ? <Volume2 size={18} /> : <VolumeX size={18} />}
@@ -315,18 +333,27 @@ export default function ChatPage() {
           )}
           {id && messages.length > 0 && (
             <button
+              type="button"
               onClick={handleExportSummary}
               disabled={summaryLoading}
-              className="flex items-center gap-1.5 text-sm text-ink-soft hover:text-teal-deep px-2.5 py-1.5 rounded-lg hover:bg-cloud transition-colors disabled:opacity-50"
+              className="btn-ghost flex min-h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+              aria-label="Download consultation summary"
             >
-              <FileDown size={16} />
-              {summaryLoading ? 'Preparing…' : 'Consultation summary'}
+              <FileDown size={17} />
+              <span className="hidden sm:inline">{summaryLoading ? 'Preparing…' : 'Summary'}</span>
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setEmergencyOpen(true)}
+            className="flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-danger-soft px-3 text-sm font-semibold text-danger-ink transition-opacity hover:opacity-90"
+          >
+            <Siren size={16} /> <span>Emergency</span>
+          </button>
         </header>
 
         {isUrgent && (
-          <div className="bg-coral-ink text-white px-4 py-2.5 flex items-center gap-2 text-sm font-medium">
+          <div role="alert" className="flex items-center gap-2 bg-danger px-4 py-2.5 text-sm font-semibold text-white">
             <ShieldAlert size={16} className="flex-shrink-0" />
             <span>This may be urgent. If you're in danger, go to the nearest hospital or call emergency services now.</span>
           </div>
@@ -335,9 +362,9 @@ export default function ChatPage() {
         {/* Message area */}
         <div id="main" role="main" ref={scrollRef} className="relative flex-1 overflow-y-auto">
           {!id && messages.length === 0 ? (
-            <EmptyState onSend={handleSend} />
+            <EmptyState onSend={handleSend} firstName={user?.fullName?.split(' ')[0]} />
           ) : (
-            <div className="max-w-4xl mx-auto px-6 md:px-12 py-8 space-y-8">
+            <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-8 md:px-12 md:py-8">
               {loadingConversation ? (
                 <p className="text-center text-ink-soft text-sm py-10">Loading…</p>
               ) : (
@@ -347,6 +374,7 @@ export default function ChatPage() {
                       message={m}
                       onLearnMore={m.role === 'assistant' ? () => setResearchTarget({ messageId: m.id, text: m.content }) : null}
                       onFeedback={m.role === 'assistant' ? handleAgentFeedback : null}
+                      onEmergency={() => setEmergencyOpen(true)}
                       researchPanel={researchTarget?.messageId === m.id ? (
                         <ResearchPanel
                           seedText={researchTarget.text}
@@ -379,7 +407,7 @@ export default function ChatPage() {
                   aria-label={`Jump to prompt ${index + 1}`}
                   className="group flex h-3 w-7 items-center justify-end"
                 >
-                  <span className="h-0.5 w-6 rounded-full bg-ink-soft/35 transition-all group-hover:w-7 group-hover:bg-teal-deep" />
+                  <span className="h-0.5 w-6 rounded-full bg-ink-soft/35 transition-all group-hover:w-7 group-hover:bg-brand" />
                 </button>
               ))}
             </nav>
@@ -388,50 +416,81 @@ export default function ChatPage() {
 
         {/* Input area */}
         {(id || messages.length > 0) && (
-          <div className="border-t border-line bg-white/60 backdrop-blur-sm px-4 py-3">
-            <div className="max-w-3xl mx-auto">
+          <div className="glass border-t border-line px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-4">
+            <div className="mx-auto max-w-3xl">
+              {suggestions.length > 0 && !sending && (
+                <div className="-mx-1 mb-2.5 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Suggested replies">
+                  {suggestions.map((text) => (
+                    <button
+                      key={text}
+                      type="button"
+                      onClick={() => handleSend(text, [])}
+                      className="animate-fade-in-up shrink-0 rounded-full border border-brand/30 bg-brand-soft px-3.5 py-2 text-sm font-medium text-brand-text transition-colors hover:border-brand"
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              )}
               <ChatInput onSend={handleSend} disabled={sending} />
-              <p className="text-xs text-ink-soft text-center mt-2">
-                Medora provides general guidance, not a medical diagnosis. In an emergency, seek in-person care immediately.
+              <p className="mt-2 text-center text-xs text-ink-soft">
+                Medora gives general guidance, not a diagnosis. In an emergency, get in-person care immediately.
               </p>
             </div>
           </div>
         )}
       </div>
+      <EmergencyDialog open={emergencyOpen} onClose={() => setEmergencyOpen(false)} />
     </div>
   );
 }
 
-function EmptyState({ onSend }) {
-  const suggestions = [
-    "I've had a headache for two days",
-    'My child has a mild fever',
-    "I've had a sore throat since yesterday",
-    'I feel dizzy when I stand up quickly',
-  ];
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
+const STARTERS = [
+  { Icon: Stethoscope, title: 'Check my symptoms', text: "I've had a headache and a mild fever since yesterday" },
+  { Icon: BookOpen, title: 'Understand a condition', text: 'Explain malaria to me in simple words' },
+  { Icon: ClipboardList, title: 'Prepare for a doctor visit', text: 'Help me prepare for my doctor appointment' },
+  { Icon: Leaf, title: 'Healthy habits', text: 'Give me simple tips for better sleep' },
+];
+
+function EmptyState({ onSend, firstName }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center px-4 text-center">
-      {/* <div className="w-14 h-14 rounded-2xl bg-teal-deep flex items-center justify-center mb-5">
-        <span className="text-white font-display font-semibold text-2xl">M</span>
-      </div> */}
-      <h1 className="font-display text-3xl font-semibold text-ink mb-2">How are you feeling today?</h1>
-      <p className="text-ink-soft max-w-md mb-8">
-        Tell Medora what's going on. Attach a photo, speak it aloud, or type and get calm, clear guidance.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-lg w-full">
-        {suggestions.map((s) => (
-          <button
-            key={s}
-            onClick={() => onSend(s, [])}
-            className="text-left text-sm px-4 py-3 rounded-xl bg-white border border-line hover:border-teal-mid hover:bg-mint-soft transition-colors text-ink"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-      <div className="w-full max-w-lg mt-8">
-        <ChatInput onSend={onSend} disabled={false} />
+    <div className="relative flex h-full min-h-full flex-col items-center justify-center overflow-hidden px-4 py-8 text-center">
+      <div className="pointer-events-none absolute inset-x-0 -top-24 h-80 opacity-70" style={{ background: 'radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--c-brand) 22%, transparent), transparent)' }} aria-hidden="true" />
+      <div className="relative w-full max-w-2xl">
+        <BrandMark size={56} className="animate-float mx-auto mb-5" />
+        <h1 className="font-display text-3xl font-extrabold text-ink sm:text-4xl">
+          {greeting()}{firstName ? `, ${firstName}` : ''}
+        </h1>
+        <p className="mx-auto mb-8 mt-2 max-w-md text-base text-ink-soft">
+          How are you feeling today? Tell me what's going on, or just say hello.
+        </p>
+        <div className="grid grid-cols-1 gap-2.5 text-left sm:grid-cols-2">
+          {STARTERS.map(({ Icon, title, text }) => (
+            <button
+              key={title}
+              type="button"
+              onClick={() => onSend(text, [])}
+              className="group flex items-start gap-3 rounded-2xl border border-line bg-surface p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand hover:shadow-md"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-text"><Icon size={19} /></span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">{title}</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-ink-soft">{text}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-6 w-full">
+          <ChatInput onSend={onSend} disabled={false} />
+          <p className="mt-2 text-xs text-ink-soft">Medora gives general guidance, not a diagnosis.</p>
+        </div>
       </div>
     </div>
   );

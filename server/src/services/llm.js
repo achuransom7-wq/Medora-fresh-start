@@ -24,4 +24,9 @@ async function chat(systemPrompt, messages, images = []) {
   return null;
 }
 
-module.exports = { isEnabled, supportsVision, chat };
+// Safe to expose publicly: reports only whether a language model is active, never keys or URLs.
+function status() {
+  return { mode: isEnabled() ? 'llm' : 'built-in' };
+}
+
+module.exports = { isEnabled, supportsVision, chat, status };

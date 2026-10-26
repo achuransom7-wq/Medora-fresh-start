@@ -2,8 +2,29 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, LogOut, User, X, Stethoscope, UserCircle, FolderPlus, Folder, ChevronDown, ChevronRight, Pencil, Trash2, Check, MoreVertical, PanelLeftClose, PanelLeftOpen, FileDown } from 'lucide-react';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { severityStyle } from './severityStyle';
+import BrandMark from './BrandMark';
+import ThemeToggle from './ThemeToggle';
 import { useAuth } from '../context/useAuth';
 import client from '../api/client';
+
+const DAY_MS = 86400000;
+const GROUP_LABELS = [['today', 'Today'], ['yesterday', 'Yesterday'], ['week', 'Previous 7 days'], ['older', 'Older']];
+
+/** Group conversations by recency so a long history stays easy to scan. */
+function groupByRecency(conversations) {
+  const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+  const buckets = { today: [], yesterday: [], week: [], older: [] };
+  for (const c of conversations) {
+    const raw = c.updated_at || c.created_at || '';
+    const time = new Date(`${raw.replace(' ', 'T')}${raw.includes('Z') || raw.includes('+') ? '' : 'Z'}`).getTime();
+    if (Number.isNaN(time)) buckets.older.push(c);
+    else if (time >= startOfToday) buckets.today.push(c);
+    else if (time >= startOfToday - DAY_MS) buckets.yesterday.push(c);
+    else if (time >= startOfToday - 7 * DAY_MS) buckets.week.push(c);
+    else buckets.older.push(c);
+  }
+  return GROUP_LABELS.map(([key, label]) => ({ key, label, items: buckets[key] })).filter((g) => g.items.length);
+}
 
 export default function Sidebar({ conversations, onNewChat, onConversationUpdated, onConversationDeleted, onDownloadThreadSummary, isOpen, onClose, collapsed, onToggleCollapsed }) {
   const { user, logout } = useAuth();
@@ -128,7 +149,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
     const active = c.id === activeId;
     return (
       <div key={c.id} className={`relative group flex items-center gap-1 rounded-xl text-sm transition-colors ${
-        active ? 'bg-mint-soft text-teal-deep font-medium' : 'text-ink hover:bg-cloud'
+        active ? 'bg-brand-soft text-brand-text font-semibold' : 'text-ink hover:bg-surface-2'
       }`}>
         {editingId === c.id ? (
           <form onSubmit={(e) => { e.preventDefault(); handleRename(c.id); }} className="flex items-center gap-1 flex-1 min-w-0 px-2 py-1">
@@ -138,10 +159,10 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
               onChange={(e) => setEditingTitle(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && setEditingId(null)}
               maxLength={120}
-              className="min-w-0 flex-1 bg-white border border-line rounded-md px-1.5 py-1 text-sm outline-none focus:border-teal-mid"
+              className="min-w-0 flex-1 bg-surface border border-line rounded-md px-1.5 py-1 text-sm outline-none focus:border-brand"
               aria-label="Conversation name"
             />
-            <button type="submit" aria-label="Save conversation name" className="p-1 text-teal-deep hover:bg-white rounded-md"><Check size={14} /></button>
+            <button type="submit" aria-label="Save conversation name" className="p-1 text-brand-text hover:bg-surface rounded-md"><Check size={14} /></button>
           </form>
         ) : (
           <>
@@ -154,26 +175,26 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
                 onClick={() => setOpenMenuId((current) => current === c.id ? null : c.id)}
                 aria-label={`More options for ${c.title}`}
                 title="Conversation options"
-                className="p-1.5 text-ink-soft hover:text-teal-deep rounded-md"
+                className="p-1.5 text-ink-soft hover:text-brand-text rounded-md"
               >
                 <MoreVertical size={16} />
               </button>
               {openMenuId === c.id && (
-                <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-line bg-white p-1.5 shadow-lg">
+                <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-line bg-surface p-1.5 shadow-lg">
                   <label className="block px-2 py-1 text-xs text-ink-soft">Case thread</label>
                   <select
                     value={c.project_id || ''}
                     onChange={(e) => handleAssign(c.id, e.target.value)}
                     aria-label={`Assign ${c.title} to a case thread`}
-                    className="mb-1 w-full rounded-lg border border-line bg-cloud px-2 py-1.5 text-xs text-ink outline-none"
+                    className="mb-1 w-full rounded-lg border border-line bg-canvas px-2 py-1.5 text-xs text-ink outline-none"
                   >
                     <option value="">No thread</option>
                     {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
                   </select>
-                  <button onClick={() => { setEditingId(c.id); setEditingTitle(c.title); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-ink hover:bg-cloud">
+                  <button onClick={() => { setEditingId(c.id); setEditingTitle(c.title); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-ink hover:bg-canvas">
                     <Pencil size={14} /> Rename
                   </button>
-                  <button onClick={() => handleDelete(c)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-coral-ink hover:bg-coral-soft">
+                  <button onClick={() => handleDelete(c)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-danger-ink hover:bg-danger-soft">
                     <Trash2 size={14} /> Delete chat
                   </button>
                 </div>
@@ -195,20 +216,18 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
         />
       )}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 ${collapsed ? 'md:w-16' : 'w-72'} bg-white border-r border-line flex flex-col transition-[width,transform] duration-200 ${
+        className={`fixed md:static inset-y-0 left-0 z-40 ${collapsed ? 'md:w-16' : 'w-72'} bg-surface border-r border-line flex flex-col transition-[width,transform] duration-200 ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         <div className={`p-4 flex items-center border-b border-line ${collapsed ? 'md:justify-center' : 'justify-between'}`}>
           <Link to="/" className={`flex items-center gap-2 ${collapsed ? 'md:hidden' : ''}`}>
-            <div className="w-8 h-8 rounded-lg bg-teal-deep flex items-center justify-center">
-              <span className="text-white font-display font-semibold text-sm">M</span>
-            </div>
-            <span className={`font-display font-semibold text-lg text-teal-deep ${collapsed ? 'md:hidden' : ''}`}>Medora</span>
+            <BrandMark size={34} />
+            <span className={`font-display text-lg font-extrabold text-ink ${collapsed ? 'md:hidden' : ''}`}>Medora</span>
           </Link>
           <button
             onClick={onToggleCollapsed}
-            className="hidden md:block p-1 text-ink-soft hover:text-teal-deep"
+            className="hidden md:block p-1 text-ink-soft hover:text-brand-text"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -222,7 +241,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
         <div className={`p-3 flex gap-2 ${collapsed ? 'md:hidden' : ''}`}>
           <button
             onClick={onNewChat}
-            className="flex-1 flex items-center justify-center gap-2 bg-mint text-teal-deep font-medium text-sm py-2.5 rounded-xl hover:bg-mint-soft transition-colors border border-teal-deep/10"
+            className="btn btn-primary flex-1 !min-h-11 text-sm"
           >
             <Plus size={16} /> New consultation
           </button>
@@ -230,7 +249,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
             onClick={() => setCreatingProject((v) => !v)}
             aria-label="New case thread"
             title="Group consultations into a case thread (e.g. 'Managing my asthma')"
-            className="flex-shrink-0 w-10 h-10 rounded-xl border border-line text-ink-soft hover:bg-cloud hover:text-teal-deep transition-colors flex items-center justify-center"
+            className="flex-shrink-0 w-10 h-10 rounded-xl border border-line text-ink-soft hover:bg-canvas hover:text-brand-text transition-colors flex items-center justify-center"
           >
             <FolderPlus size={16} />
           </button>
@@ -244,9 +263,9 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
               value={newProjectTitle}
               onChange={(e) => setNewProjectTitle(e.target.value)}
               placeholder="e.g. Managing my asthma"
-              className="flex-1 text-sm border border-line rounded-lg px-2.5 py-1.5 outline-none focus:border-teal-mid"
+              className="flex-1 text-sm border border-line rounded-lg px-2.5 py-1.5 outline-none focus:border-brand"
             />
-            <button type="submit" className="text-sm text-teal-deep font-medium px-2">
+            <button type="submit" className="text-sm text-brand-text font-medium px-2">
               Add case thread
             </button>
           </form>
@@ -265,10 +284,10 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
                       <div className="relative flex items-center gap-1">
                         <button
                           onClick={() => toggleExpand(p.id)}
-                          className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-ink hover:bg-cloud transition-colors"
+                          className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-ink hover:bg-canvas transition-colors"
                         >
                         {isOpen2 ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                        <Folder size={14} className="text-teal-mid flex-shrink-0" />
+                        <Folder size={14} className="text-brand-text flex-shrink-0" />
                         <span className="truncate font-medium flex-1 text-left">{p.title}</span>
                         <span className="text-xs text-ink-soft">{items.length}</span>
                         </button>
@@ -276,25 +295,25 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
                           onClick={() => setOpenMenuId((current) => current === p.id ? null : p.id)}
                           aria-label={`More options for ${p.title}`}
                           title="Case thread options"
-                          className="absolute right-1 p-1.5 text-ink-soft hover:text-teal-deep rounded-md"
+                          className="absolute right-1 p-1.5 text-ink-soft hover:text-brand-text rounded-md"
                         >
                           <MoreVertical size={16} />
                         </button>
                         {openMenuId === p.id && (
-                          <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-line bg-white p-1.5 shadow-lg">
+                          <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-line bg-surface p-1.5 shadow-lg">
                             {onDownloadThreadSummary && (
                               <button
                                 onClick={() => handleDownloadThreadSummary(p)}
                                 disabled={downloadingProjectId === p.id}
-                                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-ink hover:bg-cloud disabled:opacity-50"
+                                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-ink hover:bg-canvas disabled:opacity-50"
                               >
                                 <FileDown size={14} /> {downloadingProjectId === p.id ? 'Preparing...' : 'Download summary'}
                               </button>
                             )}
-                            <button onClick={() => { handleRenameProject(p); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-ink hover:bg-cloud">
+                            <button onClick={() => { handleRenameProject(p); setOpenMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-ink hover:bg-canvas">
                               <Pencil size={14} /> Rename thread
                             </button>
-                            <button onClick={() => handleDeleteProject(p)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-coral-ink hover:bg-coral-soft">
+                            <button onClick={() => handleDeleteProject(p)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-danger-ink hover:bg-danger-soft">
                               <Trash2 size={14} /> Delete thread
                             </button>
                           </div>
@@ -316,13 +335,18 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
             </>
           )}
 
-          <p className="px-2 py-2 text-xs font-medium text-ink-soft uppercase tracking-wide">
-            {projects.length > 0 ? 'Other consultations' : 'Consultations'}
-          </p>
+          {projects.length > 0 && (
+            <p className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Other consultations</p>
+          )}
           {unassigned.length === 0 && (
             <p className="px-3 py-4 text-sm text-ink-soft">No consultations yet. Start one above.</p>
           )}
-          <div className="space-y-1">{unassigned.map(renderConversation)}</div>
+          {groupByRecency(unassigned).map((group) => (
+            <div key={group.key} className="mb-2">
+              <p className="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">{group.label}</p>
+              <div className="space-y-0.5">{group.items.map(renderConversation)}</div>
+            </div>
+          ))}
         </div>
 
         <div className={`p-2 border-t border-line space-y-1 ${collapsed ? 'md:hidden' : ''}`}>
@@ -330,7 +354,7 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
             to="/referrals"
             onClick={onClose}
             className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-colors ${
-              location.pathname === '/referrals' ? 'bg-mint-soft text-teal-deep font-medium' : 'text-ink hover:bg-cloud'
+              location.pathname === '/referrals' ? 'bg-brand-soft text-brand-text font-semibold' : 'text-ink hover:bg-surface-2'
             }`}
           >
             <Stethoscope size={16} /> Referrals
@@ -339,14 +363,14 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
             to="/profile"
             onClick={onClose}
             className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-colors ${
-              location.pathname === '/profile' ? 'bg-mint-soft text-teal-deep font-medium' : 'text-ink hover:bg-cloud'
+              location.pathname === '/profile' ? 'bg-brand-soft text-brand-text font-semibold' : 'text-ink hover:bg-surface-2'
             }`}
           >
             <UserCircle size={16} /> Profile
           </Link>
           <div className="flex items-center gap-2 px-2 py-2 mt-1">
-            <div className="w-8 h-8 rounded-full bg-mint flex items-center justify-center flex-shrink-0">
-              <User size={16} className="text-teal-deep" />
+            <div className="w-8 h-8 rounded-full bg-brand-soft flex items-center justify-center flex-shrink-0">
+              <User size={16} className="text-brand-text" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-ink truncate">{user?.fullName}</p>
@@ -355,16 +379,16 @@ export default function Sidebar({ conversations, onNewChat, onConversationUpdate
             <button
               onClick={handleLogout}
               aria-label="Log out"
-              className="p-1.5 text-ink-soft hover:text-coral-ink transition-colors"
+              className="p-1.5 text-ink-soft hover:text-danger-ink transition-colors"
             >
               <LogOut size={16} />
             </button>
           </div>
+          <div className="px-2 pb-1 pt-1"><ThemeToggle /></div>
           <nav aria-label="Legal policies" className="flex flex-wrap gap-x-3 gap-y-1 px-2 pb-2 text-[11px]">
             <Link to="/legal/privacy" className="text-ink-soft underline underline-offset-2">Privacy</Link>
             <Link to="/legal/terms" className="text-ink-soft underline underline-offset-2">Terms</Link>
             <Link to="/legal/cookies" className="text-ink-soft underline underline-offset-2">Cookies</Link>
-            <Link to="/legal/refunds" className="text-ink-soft underline underline-offset-2">Refunds</Link>
           </nav>
         </div>
       </aside>

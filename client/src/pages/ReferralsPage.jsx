@@ -49,7 +49,7 @@ export default function ReferralsPage() {
   };
 
   return (
-    <div className="flex h-dvh bg-cloud">
+    <div className="flex h-dvh bg-canvas">
       <Sidebar
         conversations={conversations}
         onNewChat={handleNewChat}
@@ -62,14 +62,14 @@ export default function ReferralsPage() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-line bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <header className="flex items-center gap-3 px-4 py-3 border-b border-line bg-surface/80 backdrop-blur-sm sticky top-0 z-10">
           <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="md:hidden text-ink-soft">
             <Menu size={22} />
           </button>
-          <button onClick={() => navigate('/')} className="hidden md:flex items-center gap-1.5 text-sm text-ink-soft hover:text-teal-deep">
+          <button onClick={() => navigate('/')} className="hidden md:flex items-center gap-1.5 text-sm text-ink-soft hover:text-brand-text">
             <ArrowLeft size={16} /> Back to chat
           </button>
-          <span className="font-display font-semibold text-teal-deep md:hidden">Referrals</span>
+          <span className="font-display font-semibold text-brand-text md:hidden">Referrals</span>
         </header>
 
         <div className="max-w-2xl mx-auto w-full px-4 py-8">
@@ -79,7 +79,7 @@ export default function ReferralsPage() {
           {loading ? (
             <p className="text-ink-soft text-sm">Loading…</p>
           ) : referrals.length === 0 ? (
-            <div className="bg-white border border-line rounded-2xl p-8 text-center">
+            <div className="bg-surface border border-line rounded-2xl p-8 text-center">
               <p className="text-ink-soft text-sm">
                 No referrals yet. When Medora recommends seeing a doctor, you'll be able to request a referral right from the chat.
               </p>
@@ -89,7 +89,7 @@ export default function ReferralsPage() {
               {referrals.map((r) => {
                 const s = severityStyle(r.severity);
                 return (
-                  <div key={r.id} className="bg-white border border-line rounded-2xl p-4">
+                  <div key={r.id} className="bg-surface border border-line rounded-2xl p-4">
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div>
                         <p className="font-semibold text-ink text-sm">{r.doctor_name || 'Provider listing unavailable'}</p>
@@ -101,7 +101,7 @@ export default function ReferralsPage() {
                     </div>
                     <div className="flex items-center gap-4 text-xs text-ink-soft mb-3">
                       {r.doctor_phone && (
-                        <a href={`tel:${r.doctor_phone}`} className="inline-flex items-center gap-1 text-teal-deep font-medium">
+                        <a href={`tel:${r.doctor_phone}`} className="inline-flex items-center gap-1 text-brand-text font-medium">
                           <Phone size={12} /> {r.doctor_phone}
                         </a>
                       )}
@@ -111,13 +111,13 @@ export default function ReferralsPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => updateStatus(r.id, 'contacted')}
-                          className="text-xs font-medium bg-mint text-teal-deep px-3 py-1.5 rounded-full hover:bg-mint-soft transition-colors"
+                          className="text-xs font-medium bg-brand-soft text-brand-text px-3 py-1.5 rounded-full hover:bg-surface-2 transition-colors"
                         >
                           Mark as contacted
                         </button>
                         <button
                           onClick={() => updateStatus(r.id, 'cancelled')}
-                          className="text-xs font-medium text-ink-soft hover:text-coral transition-colors px-3 py-1.5"
+                          className="text-xs font-medium text-ink-soft hover:text-danger transition-colors px-3 py-1.5"
                         >
                           Cancel
                         </button>
@@ -126,7 +126,7 @@ export default function ReferralsPage() {
                     {r.status === 'contacted' && (
                       <button
                         onClick={() => updateStatus(r.id, 'completed')}
-                        className="text-xs font-medium bg-mint text-teal-deep px-3 py-1.5 rounded-full hover:bg-mint-soft transition-colors"
+                        className="text-xs font-medium bg-brand-soft text-brand-text px-3 py-1.5 rounded-full hover:bg-surface-2 transition-colors"
                       >
                         Mark as completed
                       </button>

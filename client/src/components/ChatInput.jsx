@@ -98,7 +98,7 @@ export default function ChatInput({ onSend, disabled }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} aria-label="Send a health message" className="p-3 bg-white border border-line rounded-2xl shadow-sm transition focus-within:border-teal-mid focus-within:ring-[3px] focus-within:ring-teal-mid/20">
+    <form onSubmit={handleSubmit} aria-label="Send a health message" className="p-3 bg-surface border border-line rounded-2xl shadow-sm transition focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/20">
       {files.length > 0 && (
         <div className="flex gap-2 flex-wrap px-1 pb-2">
           {files.map((f, idx) => (
@@ -106,8 +106,8 @@ export default function ChatInput({ onSend, disabled }) {
               {f.previewUrl ? (
                 <img src={f.previewUrl} alt={`Preview of ${f.file.name}`} className="w-14 h-14 object-cover rounded-lg border border-line" />
               ) : (
-                <div className="w-14 h-14 rounded-lg border border-line bg-cloud flex flex-col items-center justify-center px-1">
-                  <FileText size={16} className="text-teal-deep" />
+                <div className="w-14 h-14 rounded-lg border border-line bg-canvas flex flex-col items-center justify-center px-1">
+                  <FileText size={16} className="text-brand-text" />
                   <span className="text-[9px] text-ink-soft truncate w-full text-center">{f.file.name}</span>
                 </div>
               )}
@@ -141,7 +141,7 @@ export default function ChatInput({ onSend, disabled }) {
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || files.length >= MAX_FILES}
           aria-label="Attach a photo or document"
-          className="flex-shrink-0 w-10 h-10 rounded-full text-ink-soft flex items-center justify-center hover:bg-cloud transition-colors disabled:opacity-30"
+          className="flex-shrink-0 w-10 h-10 rounded-full text-ink-soft flex items-center justify-center hover:bg-canvas transition-colors disabled:opacity-30"
         >
           <Paperclip size={18} />
         </button>
@@ -153,7 +153,7 @@ export default function ChatInput({ onSend, disabled }) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={listening ? 'Listening...' : "Describe how you're feeling, or attach a photo..."}
+          placeholder={listening ? 'Listening…' : 'Ask Medora anything…'}
           rows={1}
           className="min-w-0 flex-1 resize-none bg-transparent outline-none text-base text-ink placeholder:text-ink-soft/60 py-2 px-2 max-h-40"
         />
@@ -165,7 +165,7 @@ export default function ChatInput({ onSend, disabled }) {
             disabled={disabled}
             aria-label={listening ? 'Stop dictation' : 'Start voice dictation'}
             className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 ${
-              listening ? 'bg-coral-soft text-coral-ink' : 'text-ink-soft hover:bg-cloud'
+              listening ? 'bg-danger-soft text-danger-ink' : 'text-ink-soft hover:bg-canvas'
             }`}
           >
             {listening ? <MicOff size={18} /> : <Mic size={18} />}
@@ -176,7 +176,7 @@ export default function ChatInput({ onSend, disabled }) {
           type="submit"
           disabled={disabled || (!value.trim() && files.length === 0)}
           aria-label="Send message"
-          className="flex-shrink-0 w-10 h-10 rounded-full bg-teal-deep text-white flex items-center justify-center transition-opacity disabled:opacity-30 hover:bg-teal-mid focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
+          className="flex-shrink-0 w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center transition-opacity disabled:opacity-30 hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
           <Send size={18} strokeWidth={2.25} />
         </button>

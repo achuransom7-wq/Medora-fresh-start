@@ -6,7 +6,7 @@ export default function ReferralCard({ suggestion, onBook, bookingId }) {
   const s = severityStyle('see_doctor');
 
   return (
-    <div className={`rounded-2xl border ${s.bg} border-orange-alert/20 p-4 animate-fade-in-up`}>
+    <div className={`rounded-2xl border ${s.bg} border-warn/20 p-4 animate-fade-in-up`}>
       <p className="text-sm font-medium text-ink mb-3">
         {suggestion.doctors?.length
           ? `Nearby ${suggestion.specialty.toLowerCase()} options you could reach out to:`
@@ -14,7 +14,7 @@ export default function ReferralCard({ suggestion, onBook, bookingId }) {
       </p>
       {suggestion.doctors?.length > 0 && <div className="space-y-2.5">
         {suggestion.doctors.map((doc) => (
-          <div key={doc.id} className="bg-white rounded-xl p-3 border border-line flex items-start justify-between gap-3">
+          <div key={doc.id} className="bg-surface rounded-xl p-3 border border-line flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="font-semibold text-ink text-sm">{doc.full_name}</p>
               <p className="text-xs text-ink-soft mt-0.5">{doc.specialty} · {doc.clinic_name}</p>
@@ -28,7 +28,7 @@ export default function ReferralCard({ suggestion, onBook, bookingId }) {
               {doc.phone && (
                 <a
                   href={`tel:${doc.phone}`}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-teal-deep hover:underline"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-brand-text hover:underline"
                 >
                   <Phone size={12} /> Call
                 </a>
@@ -36,7 +36,7 @@ export default function ReferralCard({ suggestion, onBook, bookingId }) {
               <button
                 onClick={() => onBook(doc)}
                 disabled={bookingId === doc.id}
-                className="text-xs font-medium bg-teal-deep text-white px-2.5 py-1 rounded-full hover:bg-teal-mid transition-colors disabled:opacity-50"
+                className="text-xs font-medium bg-brand text-white px-2.5 py-1 rounded-full hover:bg-brand-hover transition-colors disabled:opacity-50"
               >
                 {bookingId === doc.id ? 'Requesting…' : 'Request referral'}
               </button>

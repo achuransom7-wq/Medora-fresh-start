@@ -12,7 +12,6 @@ const db = require('./db');
 const authRoutes = require('./routes/auth');
 const conversationRoutes = require('./routes/conversations');
 const referralRoutes = require('./routes/referrals');
-const doctorRoutes = require('./routes/doctors');
 const userRoutes = require('./routes/users');
 const projectRoutes = require('./routes/projects');
 const memoryRoutes = require('./routes/memories');
@@ -54,7 +53,7 @@ app.get('/healthz', (req, res) => res.status(200).send('ok'));
 app.get('/api/health', async (req, res) => {
   try {
     await db.prepare('SELECT 1 AS ok').get();
-    res.json({ status: 'ok', service: 'Medora API', time: new Date().toISOString() });
+    res.json({ status: 'ok', service: 'Medora API', assistant: require('./services/llm').status().mode, time: new Date().toISOString() });
   } catch (error) {
     console.error('Health check failed:', error.message);
     res.status(503).json({ status: 'degraded', service: 'Medora API' });
@@ -64,7 +63,6 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/referrals', referralRoutes);
-app.use('/api/doctors', doctorRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/memories', memoryRoutes);
